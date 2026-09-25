@@ -1,10 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// ⚠️ MOCK TEMPORAL: mientras Martín termina el backend, esto simula que el evento
-// se guardó bien, usando localStorage en vez del servidor real.
-// Cuando Martín tenga /api/eventos/ funcionando, cambia esta línea a false
-// y todo lo demás sigue igual, sin tocar nada más.
-const USAR_MOCK = true;
+// ⚠️ MOCK TEMPORAL: ya desactivado (USAR_MOCK = false). Ahora se usa el backend real.
+const USAR_MOCK = false;
 
 // POST /api/eventos/  — payload: { nombre, tipo, fecha, subtareas: [...] }
 export async function createEvento(eventoData) {
