@@ -1,39 +1,48 @@
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Hoy from './pages/Hoy';
 import Crear from './pages/Crear';
-import Evento from './pages/Evento';
+import Eventos from './pages/Eventos';
+import EventoDetalle from './pages/EventoDetalle';
 import Progreso from './pages/Progreso';
 import Login from './pages/Login';
+import Registro from './pages/Registro';
+import { RutaProtegida, RutaPublica } from './components/RutaProtegida';
+import Encabezado from './components/Encabezado';
+
+// Encabezado + contenido. Solo se muestra cuando hay sesión.
+function LayoutPrivado() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Encabezado />
+      <Outlet />
+    </div>
+  );
+}
 
 function App() {
-  const linkClass = ({ isActive }) =>
-    `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-      isActive ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'
-    }`;
-
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="flex gap-2 px-6 py-4 border-b border-gray-200 bg-white">
-          <NavLink to="/hoy" className={linkClass}>Hoy</NavLink>
-          <NavLink to="/crear" className={linkClass}>Crear</NavLink>
-          <NavLink to="/progreso" className={linkClass}>Progreso</NavLink>
-          <NavLink to="/login" className={linkClass}>Login</NavLink>
-
-          {/* ⚠️ Temporal, solo para verificar que los eventos se guardan bien.
-              Quitar este link cuando "Hoy" ya muestre los eventos reales (Sprint 2). */}
-          <NavLink to="/evento" className={linkClass}>Ver eventos</NavLink>
-        </nav>
-
-        <Routes>
-          <Route path="/hoy" element={<Hoy />} />
-          <Route path="/crear" element={<Crear />} />
-          <Route path="/evento" element={<Evento />} />
-          <Route path="/evento/:id" element={<Evento />} />
-          <Route path="/progreso" element={<Progreso />} />
+      <Routes>
+        {/* Públicas: si ya hay sesión, mandan a /hoy */}
+        <Route element={<RutaPublica />}>
           <Route path="/login" element={<Login />} />
-        </Routes>
-      </div>
+          <Route path="/registro" element={<Registro />} />
+        </Route>
+
+        {/* Protegidas: sin sesión, mandan a /login */}
+        <Route element={<RutaProtegida />}>
+          <Route element={<LayoutPrivado />}>
+            <Route path="/hoy" element={<Hoy />} />
+            <Route path="/crear" element={<Crear />} />
+            <Route path="/evento" element={<Eventos />} />
+            <Route path="/evento/:id" element={<EventoDetalle />} />
+            <Route path="/progreso" element={<Progreso />} />
+          </Route>
+        </Route>
+
+        {/* La raíz y cualquier ruta desconocida van a /hoy (que a su vez pide login si hace falta) */}
+        <Route path="*" element={<Navigate to="/hoy" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }
