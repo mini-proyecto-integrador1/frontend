@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { getGestionesHoy } from '../hoyService';
+import { getEventos } from '../eventoService';
 import {
   agruparGestiones,
+  compararGestiones,
   describirPlazo,
   fechaLocalHoy,
   formatearFecha,
@@ -51,43 +54,165 @@ const botonClase =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:opacity-90 ' +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand';
 
+const GRUPO_HECHAS = {
+  clave: 'hechas',
+  titulo: 'Hechas',
+  vacio: 'No tienes gestiones hechas.',
+  borde: 'border-l-green-600',
+  titulo_clase: 'text-green-800',
+  contador: 'bg-green-100 text-green-800',
+  plazo: 'text-green-700',
+};
+
+const ESTADOS_FILTRO = [
+  { valor: '', texto: 'Por hacer (pendientes y pospuestas)' },
+  { valor: 'pendiente', texto: 'Solo pendientes' },
+  { valor: 'pospuesto', texto: 'Solo pospuestas' },
+  { valor: 'hecho', texto: 'Solo hechas' },
+];
+
+const selectClase =
+  'mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 ' +
+  'hover:border-gray-400 focus:border-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-200';
+
 function Hoy() {
   const navigate = useNavigate();
+  // Los filtros viven en la URL (/hoy?evento=3&estado=pendiente): se conservan al recargar.
+  const [params, setParams] = useSearchParams();
+  const filtroEvento = params.get('evento') || '';
+  const filtroEstado = params.get('estado') || '';
+  const hayFiltros = Boolean(filtroEvento || filtroEstado);
+
   const [estado, setEstado] = useState('cargando'); // 'cargando' | 'listo' | 'error'
   const [gestiones, setGestiones] = useState([]);
+  const [eventos, setEventos] = useState([]);
+  const [intento, setIntento] = useState(0);
 
-  const cargar = useCallback(async () => {
-    try {
-      const data = await getGestionesHoy();
-      setGestiones(Array.isArray(data) ? data : []);
-      setEstado('listo');
-    } catch (err) {
-      if (err.status === 401 || err.status === 403) {
-        navigate('/login');
-        return;
-      }
-      setEstado('error');
-    }
-  }, [navigate]);
-
+  // Opciones del filtro de evento.
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    let activo = true;
+    getEventos()
+      .then((data) => activo && setEventos(Array.isArray(data) ? data : []))
+      .catch(() => {}); // Si falla, el filtro por evento simplemente no se muestra.
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  // Gestiones: el backend filtra (?evento, ?estado) y ya las devuelve ordenadas.
+  useEffect(() => {
+    let activo = true;
+    getGestionesHoy({ evento: filtroEvento || undefined, estado: filtroEstado || undefined })
+      .then((data) => {
+        if (!activo) return;
+        setGestiones(Array.isArray(data) ? data : []);
+        setEstado('listo');
+      })
+      .catch((err) => {
+        if (!activo) return;
+        if (err.status === 401 || err.status === 403) return navigate('/login', { replace: true });
+        setEstado('error');
+      });
+    return () => {
+      activo = false;
+    };
+  }, [filtroEvento, filtroEstado, intento, navigate]);
+
+  function cambiarFiltro(clave, valor) {
+    const nuevos = new URLSearchParams(params);
+    if (valor) nuevos.set(clave, valor);
+    else nuevos.delete(clave);
+    setEstado('cargando');
+    setParams(nuevos, { replace: true });
+  }
+
+  function limpiarFiltros() {
+    setEstado('cargando');
+    setParams({}, { replace: true });
+  }
 
   function reintentar() {
     setEstado('cargando');
-    cargar();
+    setIntento((n) => n + 1);
   }
 
   const hoy = fechaLocalHoy();
-  const grupos = useMemo(() => agruparGestiones(gestiones), [gestiones]);
-  const total = grupos.vencidas.length + grupos.hoy.length + grupos.proximas.length;
+  const soloHechas = filtroEstado === 'hecho';
+  // Si se filtran las hechas, no tiene sentido hablar de "vencidas": van en una sola lista, con el mismo orden.
+  const grupos = useMemo(() => {
+    if (soloHechas) return { hechas: [...gestiones].sort(compararGestiones) };
+    return agruparGestiones(gestiones, hoy);
+  }, [gestiones, hoy, soloHechas]);
+  const gruposVisibles = soloHechas ? [GRUPO_HECHAS] : GRUPOS;
+  const total = gruposVisibles.reduce((n, g) => n + grupos[g.clave].length, 0);
+  const nombreEvento = eventos.find((e) => String(e.id) === filtroEvento)?.nombre;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="px-4 py-8">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-brand">Hoy</h1>
-        <p className="text-gray-500 mt-1">Gestiones urgentes del día</p>
+        <h1 className="text-3xl font-bold text-gray-900">Hoy</h1>
+        <p className="text-sm text-gray-500 mt-1">Lo que necesita tu atención, de lo más urgente a lo que puede esperar.</p>
+
+        {/* Filtros (US-05). Solo si la persona tiene eventos. */}
+        {eventos.length > 0 && estado !== 'error' && (
+          <div className="mt-6 rounded-lg border border-gray-200 bg-white p-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="filtro-evento" className="block text-sm font-medium text-gray-700">
+                  Evento
+                </label>
+                <select
+                  id="filtro-evento"
+                  value={filtroEvento}
+                  onChange={(e) => cambiarFiltro('evento', e.target.value)}
+                  className={selectClase}
+                >
+                  <option value="">Todos mis eventos</option>
+                  {eventos.map((ev) => (
+                    <option key={ev.id} value={String(ev.id)}>
+                      {ev.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="filtro-estado" className="block text-sm font-medium text-gray-700">
+                  Estado de la gestión
+                </label>
+                <select
+                  id="filtro-estado"
+                  value={filtroEstado}
+                  onChange={(e) => cambiarFiltro('estado', e.target.value)}
+                  className={selectClase}
+                >
+                  {ESTADOS_FILTRO.map((o) => (
+                    <option key={o.valor} value={o.valor}>
+                      {o.texto}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {hayFiltros && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                <p className="text-sm text-gray-600" aria-live="polite">
+                  {estado === 'listo'
+                    ? `${total} ${total === 1 ? 'gestión' : 'gestiones'} con estos filtros`
+                    : 'Aplicando filtros…'}
+                </p>
+                <button
+                  type="button"
+                  onClick={limpiarFiltros}
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium
+                             text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                >
+                  <X size={14} aria-hidden="true" /> Limpiar filtros
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {estado === 'cargando' && (
           <div role="status" aria-live="polite" className="mt-8">
@@ -101,32 +226,37 @@ function Hoy() {
         )}
 
         {estado === 'error' && (
-          <div
-            role="alert"
-            className="mt-8 rounded-xl border border-red-200 bg-red-50 p-6 text-center"
-          >
+          <div role="alert" className="mt-8 rounded-xl border border-red-200 bg-red-50 p-6 text-center">
             <p className="font-medium text-red-800">No pudimos cargar tus gestiones.</p>
-            <p className="mt-1 text-sm text-red-700">
-              Revisa tu conexión e inténtalo de nuevo.
-            </p>
+            <p className="mt-1 text-sm text-red-700">Revisa tu conexión e inténtalo de nuevo.</p>
             <button type="button" onClick={reintentar} className={`mt-4 ${botonClase}`}>
               Reintentar
             </button>
           </div>
         )}
 
-        {estado === 'listo' && total === 0 && (
+        {/* Vacío por filtros: no es lo mismo que "no tienes gestiones" */}
+        {estado === 'listo' && total === 0 && hayFiltros && (
+          <div className="mt-8 rounded-xl border border-gray-200 bg-white p-10 text-center">
+            <p className="font-medium text-gray-900">No hay gestiones con estos filtros.</p>
+            <p className="mt-1 text-sm text-gray-600">
+              {nombreEvento ? `Prueba con otro estado o revisa todos tus eventos, no solo "${nombreEvento}".` : 'Prueba con otro estado.'}
+            </p>
+            <button type="button" onClick={limpiarFiltros} className={`mt-4 ${botonClase}`}>
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+
+        {estado === 'listo' && total === 0 && !hayFiltros && (
           <div className="mt-8 rounded-xl border border-gray-200 bg-white p-10 text-center">
             <p className="font-medium text-gray-900">No tienes gestiones pendientes.</p>
-            <p className="mt-1 text-sm text-gray-600">
-              Crea un evento y agrega sus gestiones para verlas aquí.
-            </p>
+            <p className="mt-1 text-sm text-gray-600">Crea un evento y agrega sus gestiones para verlas aquí.</p>
             <button type="button" onClick={() => navigate('/crear')} className={`mt-4 ${botonClase}`}>
               Crear evento
             </button>
           </div>
         )}
-
         {estado === 'listo' && total > 0 && (
           <>
             <div
@@ -140,7 +270,7 @@ function Hoy() {
             </div>
 
             <div className="mt-6 space-y-8">
-              {GRUPOS.map((grupo) => {
+              {gruposVisibles.map((grupo) => {
                 const lista = grupos[grupo.clave];
                 return (
                   <section key={grupo.clave} aria-labelledby={`grupo-${grupo.clave}`}>
@@ -170,6 +300,11 @@ function Hoy() {
                             <div>
                               <p className="font-medium text-gray-900">
                                 {g.nombre}
+                                {g.estado === 'hecho' && (
+                                  <span className="ml-2 rounded bg-green-50 px-1.5 py-0.5 text-xs font-normal text-green-800">
+                                    Hecha
+                                  </span>
+                                )}
                                 {g.estado === 'pospuesto' && (
                                   <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-normal text-gray-600">
                                     Pospuesta
@@ -180,7 +315,7 @@ function Hoy() {
                             </div>
                             <div className="shrink-0 text-right text-sm">
                               <p className={`font-medium ${grupo.plazo}`}>
-                                {describirPlazo(g.fecha_limite, hoy)}
+                                {g.estado === 'hecho' ? 'Terminada' : describirPlazo(g.fecha_limite, hoy)}
                               </p>
                               <p className="text-gray-500">
                                 {formatearFecha(g.fecha_limite)} · {formatearHoras(g.horas_estimadas)} h

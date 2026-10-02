@@ -1,8 +1,13 @@
 import { useReducer, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, X } from 'lucide-react';
 import { createEvento } from '../eventoService';
+import Campo from '../components/Campo';
 
 const todayStr = new Date().toISOString().split('T')[0];
+
+// AAAA-MM-DD -> DD/MM/AAAA, para mostrar fechas como las lee el organizador.
+const formatoFecha = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
 
 // --- Estado del evento manejado con reducer, en vez de useState por campo ---
 const initialState = {
@@ -39,96 +44,116 @@ function validar(values, subtareas) {
   if (!values.fecha) errors.fecha = 'Selecciona la fecha del evento.';
   else if (values.fecha < todayStr) errors.fecha = 'La fecha no puede ser en el pasado.';
   else if (subtareas.some((s) => s.fecha_limite > values.fecha)) {
-    errors.fecha = 'Hay una gestión con fecha posterior a esta.';
+    errors.fecha = 'Hay una gestión con fecha límite posterior a esta fecha.';
   }
   return errors;
 }
 
-// --- Fila de captura rápida de una gestión (inline, no en modal ni tarjeta aparte) ---
-function FilaNuevaGestion({ fechaTope, onAgregar, onCancelar }) {
+// --- Formulario para agregar una gestión (campos uno debajo del otro) ---
+function NuevaGestion({ fechaTope, onAgregar, onCancelar }) {
   const [nombre, setNombre] = useState('');
   const [fecha, setFecha] = useState('');
   const [horas, setHoras] = useState('');
   const [errores, setErrores] = useState({});
 
-  const validarFila = () => {
+  const validarGestion = () => {
     const errs = {};
-    if (!nombre.trim()) errs.nombre = 'Requerido';
-    if (!fecha) {
-      errs.fecha = 'Requerido';
-    } else if (fechaTope && fecha > fechaTope) {
-      errs.fecha = `No puede ser después del ${fechaTope}`;
+    if (!nombre.trim()) errs.nombre = 'Escribe el nombre de la gestión.';
+    if (!fecha) errs.fecha = 'Selecciona la fecha límite.';
+    else if (fecha < todayStr) errs.fecha = 'La fecha límite no puede ser en el pasado.';
+    else if (fechaTope && fecha > fechaTope) {
+      errs.fecha = `Debe ser antes o el mismo día del evento (${formatoFecha(fechaTope)}).`;
     }
-    if (!horas) {
-      errs.horas = 'Requerido';
-    } else {
+    if (!horas) errs.horas = 'Escribe las horas estimadas.';
+    else {
       const h = parseFloat(horas);
-      if (isNaN(h) || h <= 0 || h > 16) errs.horas = 'Entre 0 y 16';
+      if (isNaN(h) || h <= 0 || h > 16) errs.horas = 'Escribe un valor entre 0,5 y 16 horas.';
     }
     return errs;
   };
 
   const agregar = () => {
-    const errs = validarFila();
+    const errs = validarGestion();
     if (Object.keys(errs).length) {
       setErrores(errs);
       return;
     }
-    onAgregar({ id: crypto.randomUUID(), nombre: nombre.trim(), fecha_limite: fecha, horas_estimadas: parseFloat(horas) });
-    setNombre(''); setFecha(''); setHoras(''); setErrores({});
+    onAgregar({
+      id: crypto.randomUUID(),
+      nombre: nombre.trim(),
+      fecha_limite: fecha,
+      horas_estimadas: parseFloat(horas),
+    });
   };
 
-  const campoClase = (campo) =>
-    `border rounded-md px-2 py-1.5 text-sm outline-none ${errores[campo] ? 'border-brand' : 'border-gray-200 focus:border-brand'}`;
+  // Enter dentro de una gestión la agrega, en vez de enviar todo el evento.
+  const alPresionarTecla = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      agregar();
+    }
+  };
+
+  const limpiarError = (campo) => setErrores((p) => ({ ...p, [campo]: undefined }));
 
   return (
-    <div className="border-t border-gray-100 pt-3">
-      <div className="grid grid-cols-[1fr_140px_90px_auto] gap-2 items-start">
-        <div>
-          <input
-            value={nombre}
-            onChange={(e) => { setNombre(e.target.value); setErrores((p) => ({ ...p, nombre: undefined })); }}
-            placeholder="Nombre de la gestión"
-            className={`w-full ${campoClase('nombre')}`}
-          />
-          {errores.nombre && <p className="text-brand text-[11px] mt-0.5">{errores.nombre}</p>}
-        </div>
-        <div>
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => { setFecha(e.target.value); setErrores((p) => ({ ...p, fecha: undefined })); }}
-            className={`w-full ${campoClase('fecha')}`}
-          />
-          {errores.fecha && <p className="text-brand text-[11px] mt-0.5">{errores.fecha}</p>}
-        </div>
-        <div>
-          <input
-            type="number"
-            value={horas}
-            onChange={(e) => { setHoras(e.target.value); setErrores((p) => ({ ...p, horas: undefined })); }}
-            placeholder="Horas"
-            min="0"
-            step="0.5"
-            className={`w-full ${campoClase('horas')}`}
-          />
-          {errores.horas && <p className="text-brand text-[11px] mt-0.5">{errores.horas}</p>}
-        </div>
+    <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4" onKeyDown={alPresionarTecla}>
+      <p className="text-sm font-medium text-gray-900">Nueva gestión</p>
+
+      <Campo
+        id="gestion-nombre"
+        label="Nombre de la gestión"
+        placeholder="Confirmar el catering"
+        value={nombre}
+        onChange={(e) => { setNombre(e.target.value); limpiarError('nombre'); }}
+        error={errores.nombre}
+        autoFocus
+      />
+
+      <Campo
+        id="gestion-fecha"
+        label="Fecha límite"
+        type="date"
+        min={todayStr}
+        max={fechaTope || undefined}
+        ayuda={fechaTope ? `Hasta el día del evento (${formatoFecha(fechaTope)}).` : 'Desde hoy en adelante.'}
+        value={fecha}
+        onChange={(e) => { setFecha(e.target.value); limpiarError('fecha'); }}
+        error={errores.fecha}
+      />
+
+      <Campo
+        id="gestion-horas"
+        label="Horas estimadas"
+        type="number"
+        min="0.5"
+        max="16"
+        step="0.5"
+        placeholder="2"
+        ayuda="Entre 0,5 y 16 horas."
+        value={horas}
+        onChange={(e) => { setHoras(e.target.value); limpiarError('horas'); }}
+        error={errores.horas}
+      />
+
+      <div className="flex gap-2">
         <button
           type="button"
           onClick={agregar}
-          className="bg-gray-900 text-white text-sm font-medium rounded-md px-3 py-1.5 hover:bg-black h-fit"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
         >
           Añadir
         </button>
+        <button
+          type="button"
+          onClick={onCancelar}
+          className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700
+                     hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+        >
+          Cancelar
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onCancelar}
-        className="text-gray-400 hover:text-gray-600 text-xs mt-2"
-      >
-        Cancelar
-      </button>
     </div>
   );
 }
@@ -144,6 +169,7 @@ function Crear() {
   const campo = (name) => ({
     name,
     value: state.values[name],
+    error: state.errors[name],
     onChange: (e) => dispatch({ type: 'SET_FIELD', field: name, value: e.target.value }),
   });
 
@@ -157,10 +183,17 @@ function Crear() {
     }
     setEnviando(true);
     try {
-      await createEvento({ ...state.values, subtareas: state.subtareas });
+      // El id temporal solo sirve en pantalla; no se envía al backend.
+      // eslint-disable-next-line no-unused-vars
+      const subtareas = state.subtareas.map(({ id: _id, ...resto }) => resto);
+      await createEvento({ ...state.values, subtareas });
       setCreado(true);
-    } catch {
-      setErrorGeneral('No se pudo guardar el evento. Revisa tu conexión e intenta otra vez.');
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) {
+        navigate('/login', { replace: true });
+        return;
+      }
+      setErrorGeneral('No se pudo guardar el evento. Revisa tu conexión e inténtalo otra vez.');
     } finally {
       setEnviando(false);
     }
@@ -174,7 +207,7 @@ function Crear() {
           <p className="text-gray-500 mt-1 mb-6">Ya quedó registrado junto con sus gestiones logísticas.</p>
           <button
             onClick={() => navigate('/hoy')}
-            className="bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-md px-5 py-2.5"
+            className="bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg px-5 py-2.5"
           >
             Ver en Hoy
           </button>
@@ -184,85 +217,74 @@ function Crear() {
   }
 
   return (
-    <section className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-3xl mx-auto grid md:grid-cols-5 gap-6">
+    <section className="min-h-screen bg-gray-50 px-4 py-8">
+      <form onSubmit={enviar} noValidate className="mx-auto max-w-xl space-y-6">
+        <header>
+          <h1 className="text-3xl font-bold text-gray-900">Crear nuevo evento</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Completa los datos de tu evento y su plan logístico inicial.
+          </p>
+        </header>
 
-        {/* Columna izquierda: datos del evento */}
-        <form onSubmit={enviar} className="md:col-span-2 bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-4 h-fit">
-          <h1 className="text-lg font-bold text-gray-900">Datos del evento</h1>
+        {/* 1. Datos del evento */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+          <h2 className="text-lg font-bold text-gray-900">Datos del evento</h2>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-gray-600 font-medium">Nombre</span>
-            <input {...campo('nombre')} placeholder="Boda Camila y Andrés"
-              className={`rounded-md px-3 py-2 text-sm outline-none border ${state.errors.nombre ? 'border-brand' : 'border-gray-200 focus:border-brand'}`} />
-            {state.errors.nombre && <span className="text-brand text-xs">{state.errors.nombre}</span>}
-          </label>
+          <Campo id="evento-nombre" label="Nombre" placeholder="Boda Camila y Andrés" {...campo('nombre')} />
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-gray-600 font-medium">Tipo</span>
-            <input {...campo('tipo')} placeholder="Social, corporativo..."
-              className={`rounded-md px-3 py-2 text-sm outline-none border ${state.errors.tipo ? 'border-brand' : 'border-gray-200 focus:border-brand'}`} />
-            {state.errors.tipo && <span className="text-brand text-xs">{state.errors.tipo}</span>}
-          </label>
+          <Campo
+            id="evento-tipo"
+            label="Tipo"
+            placeholder="Social"
+            ayuda="Por ejemplo: social, corporativo, cultural o deportivo."
+            {...campo('tipo')}
+          />
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-gray-600 font-medium">Fecha</span>
-            <input type="date" {...campo('fecha')}
-              className={`rounded-md px-3 py-2 text-sm outline-none border ${state.errors.fecha ? 'border-brand' : 'border-gray-200 focus:border-brand'}`} />
-            {state.errors.fecha && <span className="text-brand text-xs">{state.errors.fecha}</span>}
-          </label>
+          <Campo
+            id="evento-fecha"
+            label="Fecha"
+            type="date"
+            min={todayStr}
+            ayuda="Desde hoy en adelante."
+            {...campo('fecha')}
+          />
+        </div>
 
-          {errorGeneral && <p className="text-brand text-sm">{errorGeneral}</p>}
-
-          <button
-            type="submit"
-            disabled={enviando}
-            className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white text-sm font-semibold rounded-md py-2.5 mt-2"
-          >
-            {enviando ? 'Guardando…' : 'Guardar evento'}
-          </button>
-        </form>
-
-        {/* Columna derecha: tabla de gestiones logísticas */}
-        <div className="md:col-span-3 bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-1">Gestiones logísticas</h2>
-          <p className="text-gray-500 text-xs mb-4">Agrega cada gestión con su fecha límite y horas estimadas.</p>
+        {/* 2. Gestiones logísticas */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="text-lg font-bold text-gray-900">Gestiones logísticas</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Agrega cada gestión con su fecha límite y las horas que te va a tomar.
+          </p>
 
           {state.subtareas.length === 0 ? (
-            <p className="text-gray-400 text-sm italic mb-3">Aún no has agregado ninguna gestión.</p>
+            <p className="mt-4 text-sm text-gray-500">Aún no has agregado ninguna gestión.</p>
           ) : (
-            <table className="w-full text-sm mb-3">
-              <thead>
-                <tr className="text-left text-gray-500 text-xs border-b border-gray-100">
-                  <th className="pb-2 font-medium">Gestión</th>
-                  <th className="pb-2 font-medium">Fecha</th>
-                  <th className="pb-2 font-medium">Horas</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.subtareas.map((s) => (
-                  <tr key={s.id} className="border-b border-gray-50">
-                    <td className="py-2 text-gray-800">{s.nombre}</td>
-                    <td className="py-2 text-gray-600">{s.fecha_limite}</td>
-                    <td className="py-2 text-gray-600">{s.horas_estimadas}h</td>
-                    <td className="py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => dispatch({ type: 'REMOVE_SUBTAREA', id: s.id })}
-                        className="text-gray-300 hover:text-brand text-xs"
-                      >
-                        quitar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul className="mt-4 divide-y divide-gray-100 border-y border-gray-100">
+              {state.subtareas.map((s) => (
+                <li key={s.id} className="flex items-start justify-between gap-3 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{s.nombre}</p>
+                    <p className="text-xs text-gray-500">
+                      Vence el {formatoFecha(s.fecha_limite)} · {s.horas_estimadas} h
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'REMOVE_SUBTAREA', id: s.id })}
+                    aria-label={`Quitar la gestión ${s.nombre}`}
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500
+                               hover:bg-red-50 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                  >
+                    <X size={14} aria-hidden="true" /> Quitar
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
 
           {mostrarFormGestion ? (
-            <FilaNuevaGestion
+            <NuevaGestion
               fechaTope={state.values.fecha}
               onAgregar={(s) => {
                 dispatch({ type: 'ADD_SUBTAREA', subtarea: s });
@@ -274,13 +296,42 @@ function Crear() {
             <button
               type="button"
               onClick={() => setMostrarFormGestion(true)}
-              className="flex items-center gap-1.5 text-brand hover:text-brand-dark text-sm font-semibold"
+              className="mt-4 flex items-center gap-1.5 rounded-md text-sm font-semibold text-brand hover:text-brand-dark
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
             >
-              <span className="text-lg leading-none">+</span> Agregar gestión logística
+              <Plus size={16} aria-hidden="true" /> Agregar gestión logística
             </button>
           )}
         </div>
-      </div>
+
+        {errorGeneral && (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {errorGeneral}
+          </div>
+        )}
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => navigate('/hoy')}
+            className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700
+                       hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={enviando}
+            className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
+          >
+            {enviando ? 'Guardando…' : 'Guardar evento'}
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500">Los campos con * son obligatorios.</p>
+      </form>
     </section>
   );
 }
