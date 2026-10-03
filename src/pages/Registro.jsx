@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Circle } from 'lucide-react';
-import AccesoLayout from '../components/AccesoLayout';
 import Campo from '../components/Campo';
+import FechaNacimiento from '../components/FechaNacimiento';
 import { iniciarSesion, registrarse } from '../authService';
 
 const VACIO = {
@@ -26,6 +26,8 @@ function Requisito({ cumple, children }) {
 }
 
 const SOLO_LETRAS = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+const MIN_LETRAS = 3;
+const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 
 // Validación en el cliente: misma regla que el backend, para avisar antes de enviar.
 function validar(v) {
@@ -35,17 +37,18 @@ function validar(v) {
 
   if (!v.last_name.trim()) errores.last_name = 'Escribe tu apellido.';
   else if (!SOLO_LETRAS.test(v.last_name)) errores.last_name = 'El apellido solo puede tener letras.';
+  else if (v.last_name.trim().length < MIN_LETRAS) errores.last_name = `El apellido debe tener al menos ${MIN_LETRAS} letras.`;
+  else if (v.first_name.trim().length < MIN_LETRAS) errores.first_name = `El nombre debe tener al menos ${MIN_LETRAS} letras.`;
 
   if (!v.email.trim()) errores.email = 'Escribe tu correo.';
-  else if (!/^\S+@\S+\.\S+$/.test(v.email.trim()))
-    errores.email = 'Escribe un correo válido, por ejemplo nombre@correo.com.';
+  else if (!EMAIL_VALIDO.test(v.email.trim()))
+    errores.email = 'Escribe un correo válido, por ejemplo nombre@correo.com';
 
   if (!v.fecha_nacimiento) errores.fecha_nacimiento = 'Escribe tu fecha de nacimiento.';
 
   if (!v.password) errores.password = 'Escribe una contraseña.';
   else if (v.password.length < 8) errores.password = 'La contraseña debe tener al menos 8 caracteres.';
-  else if (/^\d+$/.test(v.password)) errores.password = 'La contraseña no puede tener solo números.';
-
+else if (!/[A-ZÁÉÍÓÚÑ]/.test(v.password) || !/\d/.test(v.password)) errores.password = 'La contraseña debe tener al menos una mayúscula y números.';
   if (v.confirmar !== v.password) errores.confirmar = 'Las contraseñas no coinciden.';
   return errores;
 }
@@ -98,7 +101,7 @@ function Registro() {
   }
 
   return (
-    <AccesoLayout titulo="Crea tu cuenta" subtitulo="Organiza tus eventos y su plan logístico en un solo lugar.">
+    <>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {errorGeneral && (
           <div
@@ -113,25 +116,31 @@ function Registro() {
           <Campo
             id="registro-nombre"
             name="first_name"
-            label="Nombre"
+            label="Nombres"
             autoComplete="given-name"
             placeholder="Camila"
-            ayuda="Solo letras."
             value={valores.first_name}
             onChange={cambiar}
             error={errores.first_name}
-          />
+          >
+            {valores.first_name && !errores.first_name && (<ul><Requisito cumple={SOLO_LETRAS.test(valores.first_name) 
+              && valores.first_name.trim().length >= MIN_LETRAS}>{!SOLO_LETRAS.test(valores.first_name) 
+              ? 'Solo letras, sin números ni símbolos' : valores.first_name.trim().length < MIN_LETRAS ? `Mínimo ${MIN_LETRAS} letras y solo números` : 'Nombre válido'}</Requisito></ul>)}          
+          </Campo>
           <Campo
             id="registro-apellido"
             name="last_name"
-            label="Apellido"
+            label="Apellidos"
             autoComplete="family-name"
             placeholder="Rojas"
-            ayuda="Solo letras."
             value={valores.last_name}
             onChange={cambiar}
-            error={errores.last_name}
-          />
+            error={errores.last_name}        
+          >
+            {valores.last_name && !errores.last_name && (<ul><Requisito cumple={SOLO_LETRAS.test(valores.last_name) 
+              && valores.last_name.trim().length >= MIN_LETRAS}>{!SOLO_LETRAS.test(valores.last_name) 
+              ? 'Solo letras, sin números ni símbolos' : valores.last_name.trim().length < MIN_LETRAS ? `Mínimo ${MIN_LETRAS} letras` : 'Apellido válido'}</Requisito></ul>)}
+          </Campo>
         </div>
 
         <Campo
@@ -141,22 +150,17 @@ function Registro() {
           type="email"
           autoComplete="email"
           placeholder="camila@correo.com"
-          ayuda="Lo usarás para iniciar sesión."
+          maxLength={150}
           value={valores.email}
           onChange={cambiar}
           error={errores.email}
-        />
+        >
+          {valores.email && !errores.email && (<ul><Requisito cumple={EMAIL_VALIDO.test(valores.email.trim())}>{EMAIL_VALIDO.test(valores.email.trim()) 
+          ? 'Correo válido' : 'Escribe un correo con formato válido'}</Requisito></ul>)}
+        </Campo>
 
-        <Campo
-          id="registro-nacimiento"
-          name="fecha_nacimiento"
-          label="Fecha de nacimiento"
-          type="date"
-          autoComplete="bday"
-          value={valores.fecha_nacimiento}
-          onChange={cambiar}
-          error={errores.fecha_nacimiento}
-        />
+        <FechaNacimiento id="registro-nacimiento" name="fecha_nacimiento" 
+        value={valores.fecha_nacimiento} onChange={cambiar} error={errores.fecha_nacimiento} />
 
         <Campo
           id="registro-password"
@@ -164,16 +168,17 @@ function Registro() {
           label="Contraseña"
           type="password"
           autoComplete="new-password"
+          placeholder="Ingresa aquí tu contraseña"
           value={valores.password}
           onChange={cambiar}
           error={errores.password}
         >
+          {valores.password && (
           <ul className="space-y-0.5" aria-label="Requisitos de la contraseña">
             <Requisito cumple={valores.password.length >= 8}>Al menos 8 caracteres</Requisito>
-            <Requisito cumple={valores.password !== '' && !/^\d+$/.test(valores.password)}>
-              No solo números
-            </Requisito>
+            <Requisito cumple={/[A-ZÁÉÍÓÚÑ]/.test(valores.password) && /\d/.test(valores.password)}>Al menos una mayúscula y números</Requisito>
           </ul>
+          )}
         </Campo>
 
         <Campo
@@ -182,6 +187,7 @@ function Registro() {
           label="Confirmar contraseña"
           type="password"
           autoComplete="new-password"
+          placeholder="confirma aquí tu contraseña"
           value={valores.confirmar}
           onChange={cambiar}
           error={errores.confirmar}
@@ -209,7 +215,7 @@ function Registro() {
           {loading ? 'Creando tu cuenta…' : 'Crear cuenta'}
         </button>
       </form>
-    </AccesoLayout>
+    </>
   );
 }
 

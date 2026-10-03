@@ -1,8 +1,11 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import AlturaAnimada from './AlturaAnimada';
 
 // Contenedor compartido por Login y Registro:
 // título, subtítulo, selector entre las dos opciones y tarjeta del formulario.
-function AccesoLayout({ titulo, subtitulo, children }) {
+function AccesoLayout() {
+  const { pathname } = useLocation();
+  const esRegistro = pathname === '/registro';
   const pestanaClase = ({ isActive }) =>
     `flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-medium
      transition-all duration-300
@@ -170,12 +173,12 @@ function AccesoLayout({ titulo, subtitulo, children }) {
             text-gray-900
           "
         >
-          {titulo}
+          {esRegistro ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}
         </h1>
 
         {/* Subtítulo */}
         <p className="mt-2 text-center text-sm leading-6 text-gray-500">
-          {subtitulo}
+          {esRegistro ? 'Organiza tus eventos y su plan logístico en un solo lugar.' : 'Entra para ver tus gestiones del día.'}
         </p>
 
 
@@ -222,7 +225,7 @@ function AccesoLayout({ titulo, subtitulo, children }) {
             backdrop-blur-xl
           "
         >
-          {children}
+          <AlturaAnimada><Outlet /></AlturaAnimada>
         </div>
 
       </div>

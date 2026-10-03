@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AccesoLayout from '../components/AccesoLayout';
 import Campo from '../components/Campo';
 import { iniciarSesion } from '../authService';
 
@@ -35,7 +34,7 @@ function Login() {
   }
 
   return (
-    <AccesoLayout titulo="Bienvenido de nuevo" subtitulo="Entra para ver tus gestiones del día.">
+      <>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {error && (
           <div
@@ -51,7 +50,7 @@ function Login() {
           label="Correo electrónico"
           type="email"
           autoComplete="email"
-          placeholder="camila@correo.com"
+          placeholder="ejemplo@correo.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -61,6 +60,7 @@ function Login() {
           label="Contraseña"
           type="password"
           autoComplete="current-password"
+          placeholder="Ingresa aquí tu contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -75,7 +75,7 @@ function Login() {
           {loading ? 'Entrando…' : 'Iniciar sesión'}
         </button>
       </form>
-    </AccesoLayout>
+    </>
   );
 }
 

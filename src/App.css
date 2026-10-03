@@ -255,3 +255,5 @@
 .float-organic-3 {
   animation: floatOrganic 13s ease-in-out infinite;
 }
+
+html { scrollbar-gutter: stable; }
