@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Registro from './pages/Registro';
 import { RutaProtegida, RutaPublica } from './components/RutaProtegida';
 import Encabezado from './components/Encabezado';
+import AccesoLayout from './components/AccesoLayout';
 
 // Encabezado + contenido. Solo se muestra cuando hay sesión.
 function LayoutPrivado() {
@@ -25,8 +26,10 @@ function App() {
       <Routes>
         {/* Públicas: si ya hay sesión, mandan a /hoy */}
         <Route element={<RutaPublica />}>
+          <Route element={<AccesoLayout />}>    
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
+          </Route>
         </Route>
 
         {/* Protegidas: sin sesión, mandan a /login */}
