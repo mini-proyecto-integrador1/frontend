@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -26,6 +27,164 @@ function maxDiaPermitido(mes, anio) {
   let max = diasDelMes(mes, anio);
   if (anio === LIMITE.anio && mes === LIMITE.mes) max = Math.min(max, LIMITE.dia);
   return max;
+}
+
+// Lista desplegable propia: el menú muestra máximo 9 filas y el resto se recorre con scroll.
+const ALTO_FILA = 36; // equivale a h-9
+const FILAS_VISIBLES = 9;
+const ALTO_MENU = ALTO_FILA * FILAS_VISIBLES + 10; // + padding y borde del menú
+
+function ListaDesplegable({ id, ariaLabel, placeholder, value, opciones, onSelect, clase, error }) {
+  const [abierto, setAbierto] = useState(false);
+  const [posicion, setPosicion] = useState(null);
+  const botonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const seleccionada = opciones.find((o) => String(o.valor) === String(value));
+
+  function abrir() {
+    const r = botonRef.current.getBoundingClientRect();
+    const espacioAbajo = window.innerHeight - r.bottom - 12;
+    const haciaArriba = espacioAbajo < ALTO_MENU && r.top > espacioAbajo;
+    const espacio = haciaArriba ? r.top - 12 : espacioAbajo;
+    setPosicion({
+      left: r.left,
+      width: r.width,
+      top: haciaArriba ? undefined : r.bottom + 4,
+      bottom: haciaArriba ? window.innerHeight - r.top + 4 : undefined,
+      maxHeight: Math.max(120, Math.min(ALTO_MENU, espacio)),
+    });
+    setAbierto(true);
+  }
+
+  function cerrar(devolverFoco = false) {
+    setAbierto(false);
+    if (devolverFoco) botonRef.current?.focus();
+  }
+
+  useEffect(() => {
+    if (!abierto) return undefined;
+    const menu = menuRef.current;
+    const elegida = menu.querySelector('[aria-selected="true"]');
+    if (elegida) menu.scrollTop = elegida.offsetTop - menu.clientHeight / 2 + elegida.clientHeight / 2;
+    (elegida || menu.querySelector('[role="option"]'))?.focus({ preventScroll: true });
+
+    function alHacerClicFuera(e) {
+      if (!menu.contains(e.target) && !botonRef.current.contains(e.target)) setAbierto(false);
+    }
+    function alHacerScroll(e) {
+      if (!menu.contains(e.target)) setAbierto(false);
+    }
+    function alCambiarTamano() {
+      setAbierto(false);
+    }
+    document.addEventListener('mousedown', alHacerClicFuera);
+    window.addEventListener('scroll', alHacerScroll, true);
+    window.addEventListener('resize', alCambiarTamano);
+    return () => {
+      document.removeEventListener('mousedown', alHacerClicFuera);
+      window.removeEventListener('scroll', alHacerScroll, true);
+      window.removeEventListener('resize', alCambiarTamano);
+    };
+  }, [abierto]);
+
+  function alPresionarEnMenu(e) {
+    const filas = Array.from(menuRef.current.querySelectorAll('[role="option"]'));
+    const i = filas.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      filas[Math.min(i + 1, filas.length - 1)]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      filas[Math.max(i - 1, 0)]?.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cerrar(true);
+    } else if (e.key === 'Tab') {
+      setAbierto(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        ref={botonRef}
+        id={id}
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={abierto}
+        aria-invalid={Boolean(error)}
+        onClick={() => (abierto ? cerrar() : abrir())}
+        onKeyDown={(e) => {
+          if (!abierto && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            e.preventDefault();
+            abrir();
+          }
+        }}
+        className={`${clase} flex items-center justify-between gap-2 text-left`}
+      >
+        <span className="truncate">{seleccionada ? seleccionada.texto : placeholder}</span>
+        <svg
+          className="h-4 w-4 shrink-0 text-gray-400"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M5 8l5 5 5-5" />
+        </svg>
+      </button>
+
+      {abierto &&
+        posicion &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="listbox"
+            aria-label={ariaLabel}
+            onKeyDown={alPresionarEnMenu}
+            style={{
+              position: 'fixed',
+              left: posicion.left,
+              width: posicion.width,
+              top: posicion.top,
+              bottom: posicion.bottom,
+              maxHeight: posicion.maxHeight,
+              zIndex: 50,
+            }}
+            className="overflow-y-auto rounded-xl border border-[#99D5C9] bg-white p-1 shadow-xl shadow-gray-900/10"
+          >
+            {opciones.map((o) => {
+              const activa = String(o.valor) === String(value);
+              return (
+                <button
+                  key={o.valor}
+                  type="button"
+                  role="option"
+                  aria-selected={activa}
+                  onClick={() => {
+                    onSelect(String(o.valor));
+                    cerrar(true);
+                  }}
+                  className={`flex h-9 w-full items-center rounded-lg px-3 text-left text-sm focus:outline-none ${
+                    activa
+                      ? 'bg-[#99D5C9]/30 font-medium text-gray-900'
+                      : 'text-gray-700 hover:bg-gray-100 focus:bg-gray-100'
+                  }`}
+                >
+                  {o.texto}
+                </button>
+              );
+            })}
+          </div>,
+          document.body
+        )}
+    </>
+  );
 }
 
 function FechaNacimiento({ id, name, value, onChange, error }) {
@@ -62,12 +221,12 @@ function FechaNacimiento({ id, name, value, onChange, error }) {
   }
 
   const claseSelect = (valor) =>
-    `w-full rounded-lg border bg-white px-3 py-2 text-sm transition-colors
+    `w-full rounded-xl border bg-white px-3 py-2 text-sm transition-colors
      focus:outline-none focus:ring-4
      ${valor ? 'text-gray-900' : 'text-gray-400'}
      ${error
        ? 'border-brand focus:ring-red-100'
-       : 'border-gray-300 hover:border-gray-400 focus:border-gray-900 focus:ring-gray-200'}`;
+       : 'border-[#99D5C9] hover:border-[#7cc4b5] focus:border-[#99D5C9] focus:ring-[#99D5C9]/30'}`;
 
   return (
     <fieldset>
@@ -77,45 +236,37 @@ function FechaNacimiento({ id, name, value, onChange, error }) {
       </legend>
 
       <div className="mt-1 grid grid-cols-[1fr_1.7fr_1.1fr] gap-2">
-        <select
+        <ListaDesplegable
           id={id}
-          aria-label="Día"
-          aria-invalid={Boolean(error)}
-          className={claseSelect(dia)}
+          ariaLabel="Día"
+          placeholder="Día"
           value={dia}
-          onChange={(e) => actualizar({ d: e.target.value })}
-        >
-          <option value="">Día</option>
-          {dias.map((d) => (
-            <option key={d} value={d} className="text-gray-900">{d}</option>
-          ))}
-        </select>
+          opciones={dias.map((d) => ({ valor: d, texto: String(d) }))}
+          onSelect={(v) => actualizar({ d: v })}
+          clase={claseSelect(dia)}
+          error={error}
+        />
 
-        <select
-          aria-label="Mes"
-          aria-invalid={Boolean(error)}
-          className={claseSelect(mes)}
+        <ListaDesplegable
+          ariaLabel="Mes"
+          placeholder="Mes"
           value={mes}
-          onChange={(e) => actualizar({ m: e.target.value })}
-        >
-          <option value="">Mes</option>
-          {mesesValidos.map((m) => (
-            <option key={m.numero} value={m.numero} className="text-gray-900">{m.nombre}</option>
-          ))}
-        </select>
+          opciones={mesesValidos.map((m) => ({ valor: m.numero, texto: m.nombre }))}
+          onSelect={(v) => actualizar({ m: v })}
+          clase={claseSelect(mes)}
+          error={error}
+        />
 
-        <select
-          aria-label="Año"
-          aria-invalid={Boolean(error)}
-          className={claseSelect(anio)}
+        <ListaDesplegable
+          ariaLabel="Año"
+          placeholder="Año"
           value={anio}
-          onChange={(e) => actualizar({ a: e.target.value })}
-        >
-          <option value="">Año</option>
-          {anios.map((a) => (
-            <option key={a} value={a} className="text-gray-900">{a}</option>
-          ))}
-        </select>
+          opciones={anios.map((a) => ({ valor: a, texto: String(a) }))}
+          onSelect={(v) => actualizar({ a: v })}
+          clase={claseSelect(anio)}
+          error={error}
+        />
+
       </div>
 
       {error && (
