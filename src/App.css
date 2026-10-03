@@ -182,3 +182,76 @@
     border-right-color: var(--border);
   }
 }
+
+
+/* =========================================================
+   ANIMACIONES DEL FONDO DE ACCESO Bastante Guays
+   ========================================================= */
+
+@keyframes floatOrganic {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  20% {
+    transform: translate3d(15px, -10px, 0);
+  }
+
+  40% {
+    transform: translate3d(-8px, -25px, 0);
+  }
+
+  60% {
+    transform: translate3d(-20px, 5px, 0);
+  }
+
+  80% {
+    transform: translate3d(10px, 15px, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes floatOrganic2 {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  20% {
+    transform: translate3d(-12px, 8px, 0);
+  }
+
+  40% {
+    transform: translate3d(18px, -18px, 0);
+  }
+
+  60% {
+    transform: translate3d(5px, -30px, 0);
+  }
+
+  80% {
+    transform: translate3d(-18px, -5px, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.float-organic {
+  animation: floatOrganic 12s ease-in-out infinite;
+}
+
+.float-organic-1 {
+  animation: floatOrganic 11s ease-in-out infinite;
+}
+
+.float-organic-2 {
+  animation: floatOrganic2 15s ease-in-out infinite;
+}
+
+.float-organic-3 {
+  animation: floatOrganic 13s ease-in-out infinite;
+}
