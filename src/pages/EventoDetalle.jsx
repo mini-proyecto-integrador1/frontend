@@ -13,6 +13,7 @@ import { compararGestiones, describirPlazo, fechaLocalHoy, formatearFecha, forma
 import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS } from '../progresoUtils';
 import BarraProgreso from '../components/BarraProgreso';
 import Campo from '../components/Campo';
+import SelectorTipo from '../components/SelectorTipo';
 import Confirmar from '../components/Confirmar';
 import AyudaInfo from '../components/AyudaInfo';
 
@@ -66,7 +67,7 @@ function FormEvento({ evento, onGuardado, onCancelar }) {
     e.preventDefault();
     const errs = {};
     if (!v.nombre.trim()) errs.nombre = 'Escribe el nombre del evento.';
-    if (!v.tipo.trim()) errs.tipo = 'Indica el tipo de evento.';
+    if (!v.tipo.trim()) errs.tipo = 'Elige el tipo de evento, o escríbelo en "Otro".';
     if (!v.fecha) errs.fecha = 'Selecciona la fecha del evento.';
     else if (v.fecha !== evento.fecha && v.fecha < hoy) errs.fecha = 'La fecha no puede ser en el pasado.';
     else if (ultimaGestion && v.fecha < ultimaGestion)
@@ -97,14 +98,11 @@ function FormEvento({ evento, onGuardado, onCancelar }) {
         </p>
       )}
       <Campo id="editar-nombre" name="nombre" label="Nombre" value={v.nombre} onChange={cambiar} error={errores.nombre} />
-      <Campo
+      <SelectorTipo
         id="editar-tipo"
-        name="tipo"
-        label="Tipo"
-        info="Por ejemplo: social, corporativo, cultural o deportivo."
         value={v.tipo}
-        onChange={cambiar}
         error={errores.tipo}
+        onChange={(valor) => cambiar({ target: { name: 'tipo', value: valor } })}
       />
       <Campo
         id="editar-fecha"
