@@ -1,8 +1,9 @@
-import { useReducer, useState } from 'react';
+import { useImperativeHandle, useReducer, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X } from 'lucide-react';
+import { CheckCircle2, Plus, X } from 'lucide-react';
 import { createEvento } from '../eventoService';
 import Campo from '../components/Campo';
+import AyudaInfo from '../components/AyudaInfo';
 
 const todayStr = new Date().toISOString().split('T')[0];
 
@@ -50,7 +51,9 @@ function validar(values, subtareas) {
 }
 
 // --- Formulario para agregar una gestión (campos uno debajo del otro) ---
-function NuevaGestion({ fechaTope, onAgregar, onCancelar }) {
+// revisarRef: el formulario padre la usa al guardar el evento, para incluir la gestión que
+// quedó escrita aunque no se haya presionado "Añadir".
+function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
   const [nombre, setNombre] = useState('');
   const [fecha, setFecha] = useState('');
   const [horas, setHoras] = useState('');
@@ -72,19 +75,35 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar }) {
     return errs;
   };
 
+  const armar = () => ({
+    id: crypto.randomUUID(),
+    nombre: nombre.trim(),
+    fecha_limite: fecha,
+    horas_estimadas: parseFloat(horas),
+  });
+
   const agregar = () => {
     const errs = validarGestion();
     if (Object.keys(errs).length) {
       setErrores(errs);
       return;
     }
-    onAgregar({
-      id: crypto.randomUUID(),
-      nombre: nombre.trim(),
-      fecha_limite: fecha,
-      horas_estimadas: parseFloat(horas),
-    });
+    onAgregar(armar());
   };
+
+  // Al guardar el evento: vacía → se ignora; completa y válida → se incluye; a medias → muestra sus errores.
+  useImperativeHandle(revisarRef, () => ({
+    revisar() {
+      if (!nombre.trim() && !fecha && !horas) return { estado: 'vacia' };
+      const errs = validarGestion();
+      if (Object.keys(errs).length) {
+        setErrores(errs);
+        return { estado: 'incompleta' };
+      }
+      return { estado: 'lista', gestion: armar() };
+    },
+  }));
+
 
   // Enter dentro de una gestión la agrega, en vez de enviar todo el evento.
   const alPresionarTecla = (e) => {
@@ -165,6 +184,7 @@ function Crear() {
   const [creado, setCreado] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState('');
   const [mostrarFormGestion, setMostrarFormGestion] = useState(false);
+  const revisarBorrador = useRef(null);
 
   const campo = (name) => ({
     name,
@@ -176,7 +196,17 @@ function Crear() {
   const enviar = async (e) => {
     e.preventDefault();
     setErrorGeneral('');
-    const errors = validar(state.values, state.subtareas);
+    // La gestión escrita pero sin "Añadir" también se guarda.
+    let pendientes = state.subtareas;
+    if (mostrarFormGestion && revisarBorrador.current) {
+      const borrador = revisarBorrador.current.revisar();
+      if (borrador.estado === 'incompleta') {
+        setErrorGeneral('Completa la gestión que estabas agregando, o dale "Cancelar" si no la necesitas.');
+        return;
+      }
+      if (borrador.estado === 'lista') pendientes = [...pendientes, borrador.gestion];
+    }
+    const errors = validar(state.values, pendientes);
     if (Object.keys(errors).length) {
       dispatch({ type: 'SET_ERRORS', errors });
       return;
@@ -185,9 +215,9 @@ function Crear() {
     try {
       // El id temporal solo sirve en pantalla; no se envía al backend.
       // eslint-disable-next-line no-unused-vars
-      const subtareas = state.subtareas.map(({ id: _id, ...resto }) => resto);
-      await createEvento({ ...state.values, subtareas });
-      setCreado(true);
+      const subtareas = pendientes.map(({ id: _id, ...resto }) => resto);
+      const nuevo = await createEvento({ ...state.values, subtareas });
+      setCreado({ id: nuevo?.id, gestiones: subtareas.length });
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
         navigate('/login', { replace: true });
@@ -201,16 +231,37 @@ function Crear() {
 
   if (creado) {
     return (
-      <section className="min-h-screen bg-gray-50 grid place-items-center p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Evento guardado</h1>
-          <p className="text-gray-500 mt-1 mb-6">Ya quedó registrado junto con sus gestiones logísticas.</p>
-          <button
-            onClick={() => navigate('/hoy')}
-            className="bg-brand hover:bg-brand-dark text-white text-sm font-semibold rounded-lg px-5 py-2.5"
-          >
-            Ver en Hoy
-          </button>
+      <section className="grid place-items-center px-4 py-16">
+        <div className="max-w-md text-center">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-green-50 text-green-700">
+            <CheckCircle2 size={28} aria-hidden="true" />
+          </span>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">Evento guardado</h1>
+          <p className="mt-1 text-gray-600">
+            {creado.gestiones === 0
+              ? 'Ya quedó registrado. Todavía no tiene gestiones logísticas: puedes agregarlas ahora.'
+              : `Ya quedó registrado con ${creado.gestiones} ${creado.gestiones === 1 ? 'gestión logística' : 'gestiones logísticas'}. Puedes agregar más cuando quieras.`}
+          </p>
+          <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+            {creado.id && (
+              <button
+                type="button"
+                onClick={() => navigate(`/evento/${creado.id}`, { state: { agregarGestion: true } })}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-5 py-2.5
+                           text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+              >
+                <Plus size={16} aria-hidden="true" /> Agregar más gestiones
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/hoy')}
+              className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
+            >
+              Ver en Hoy
+            </button>
+          </div>
         </div>
       </section>
     );
@@ -236,7 +287,7 @@ function Crear() {
             id="evento-tipo"
             label="Tipo"
             placeholder="Social"
-            ayuda="Por ejemplo: social, corporativo, cultural o deportivo."
+            info="Por ejemplo: social, corporativo, cultural o deportivo."
             {...campo('tipo')}
           />
 
@@ -252,10 +303,14 @@ function Crear() {
 
         {/* 2. Gestiones logísticas */}
         <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="text-lg font-bold text-gray-900">Gestiones logísticas</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Agrega cada gestión con su fecha límite y las horas que te va a tomar.
-          </p>
+          <h2 className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
+            Gestiones logísticas
+            <AyudaInfo
+              nombre="Qué es una gestión logística"
+              titulo="Gestiones logísticas"
+              texto="Son las tareas que necesitas hacer antes del evento, como confirmar el catering o enviar invitaciones. Cada una lleva una fecha límite y las horas que te va a tomar."
+            />
+          </h2>
 
           {state.subtareas.length === 0 ? (
             <p className="mt-4 text-sm text-gray-500">Aún no has agregado ninguna gestión.</p>
@@ -285,6 +340,7 @@ function Crear() {
 
           {mostrarFormGestion ? (
             <NuevaGestion
+              revisarRef={revisarBorrador}
               fechaTope={state.values.fecha}
               onAgregar={(s) => {
                 dispatch({ type: 'ADD_SUBTAREA', subtarea: s });

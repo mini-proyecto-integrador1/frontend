@@ -5,6 +5,7 @@ import { getEventos } from '../eventoService';
 import { describirPlazo, formatearFecha, formatearHoras } from '../hoyUtils';
 import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS } from '../progresoUtils';
 import BarraProgreso from '../components/BarraProgreso';
+import AyudaInfo from '../components/AyudaInfo';
 
 const botonPrimario =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark ' +
@@ -147,7 +148,18 @@ function Progreso() {
       <div className="mx-auto max-w-3xl">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Progreso</h1>
+            <h1 className="flex items-center gap-2 text-3xl font-bold text-gray-900">
+              Progreso
+              <AyudaInfo
+                nombre="Cómo se calcula el avance"
+                titulo="Cómo se calcula el avance"
+                lineas={[
+                  'El porcentaje se mide por horas: terminar una gestión de 4 h avanza más que una de 1 h.',
+                  'Verde son las hechas, ámbar las pospuestas y gris las pendientes.',
+                  'Los eventos más cercanos salen primero.',
+                ]}
+              />
+            </h1>
             <p className="mt-1 text-sm text-gray-500">Cómo vas con la logística de cada evento.</p>
           </div>
           {estado === 'listo' && resumen.total > 0 && (
