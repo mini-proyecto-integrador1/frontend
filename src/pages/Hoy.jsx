@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { getGestionesHoy } from '../hoyService';
 import { getEventos } from '../eventoService';
+import AyudaInfo from '../components/AyudaInfo';
 import {
   agruparGestiones,
   compararGestiones,
@@ -259,14 +260,9 @@ function Hoy() {
         )}
         {estado === 'listo' && total > 0 && (
           <>
-            <div
-              role="note"
-              aria-label="Cómo se ordenan las gestiones"
-              className="mt-6 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 space-y-1"
-            >
-              {REGLA_PRIORIDAD.map((linea) => (
-                <p key={linea}>{linea}</p>
-              ))}
+            {/* Regla de priorización: etiqueta visible + detalle en el globo de ayuda */}
+            <div className="mt-6">
+              <AyudaInfo etiqueta="Ordenado por urgencia" titulo="Así se ordenan tus gestiones" lineas={REGLA_PRIORIDAD} />
             </div>
 
             <div className="mt-6 space-y-8">

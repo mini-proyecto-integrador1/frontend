@@ -44,3 +44,8 @@ export const eliminarEvento = (id) => pedir(`/api/eventos/${id}/`, { method: 'DE
 export const actualizarGestion = (id, cambios) =>
   pedir(`/api/subtareas/${id}/`, { method: 'PATCH', body: cambios });
 export const eliminarGestion = (id) => pedir(`/api/subtareas/${id}/`, { method: 'DELETE' });
+
+// Agregar una gestión a un evento que ya existe (recomendación del docente, requiere endpoint nuevo en BE).
+// POST /api/eventos/<id>/subtareas/  body { nombre, fecha_limite, horas_estimadas }  -> 201 con la gestión
+export const crearGestion = (eventoId, datos) =>
+  pedir(`/api/eventos/${eventoId}/subtareas/`, { method: 'POST', body: datos });

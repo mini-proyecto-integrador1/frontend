@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, ChevronLeft, Pencil, Trash2 } from 'lucide-react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { CalendarDays, ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   actualizarEvento,
   actualizarGestion,
+  crearGestion,
   eliminarEvento,
   eliminarGestion,
   getEvento,
@@ -13,6 +14,7 @@ import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS } from '../progre
 import BarraProgreso from '../components/BarraProgreso';
 import Campo from '../components/Campo';
 import Confirmar from '../components/Confirmar';
+import AyudaInfo from '../components/AyudaInfo';
 
 const btnPrimario =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50 ' +
@@ -99,7 +101,7 @@ function FormEvento({ evento, onGuardado, onCancelar }) {
         id="editar-tipo"
         name="tipo"
         label="Tipo"
-        ayuda="Por ejemplo: social, corporativo, cultural o deportivo."
+        info="Por ejemplo: social, corporativo, cultural o deportivo."
         value={v.tipo}
         onChange={cambiar}
         error={errores.tipo}
@@ -305,6 +307,104 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar }) {
   );
 }
 
+// ---------- Agregar una gestión a un evento ya guardado ----------
+function FormNuevaGestion({ evento, onCreada, onCancelar }) {
+  const hoy = fechaLocalHoy();
+  const [v, setV] = useState({ nombre: '', fecha_limite: '', horas_estimadas: '' });
+  const [errores, setErrores] = useState({});
+  const [error, setError] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  const cambiar = (e) => {
+    setV((p) => ({ ...p, [e.target.name]: e.target.value }));
+    setErrores((p) => ({ ...p, [e.target.name]: undefined }));
+    setError('');
+  };
+
+  async function guardar(e) {
+    e.preventDefault();
+    const errs = {};
+    const h = parseFloat(String(v.horas_estimadas).replace(',', '.'));
+    if (!v.nombre.trim()) errs.nombre = 'Escribe el nombre de la gestión.';
+    if (!v.fecha_limite) errs.fecha_limite = 'Selecciona la fecha límite.';
+    else if (v.fecha_limite < hoy) errs.fecha_limite = 'La fecha límite no puede ser en el pasado.';
+    else if (v.fecha_limite > evento.fecha)
+      errs.fecha_limite = `Debe ser antes o el mismo día del evento (${formatearFecha(evento.fecha)}).`;
+    if (isNaN(h) || h <= 0 || h > 16) errs.horas_estimadas = 'Escribe un valor entre 0,5 y 16 horas.';
+    if (Object.keys(errs).length) return setErrores(errs);
+
+    setGuardando(true);
+    try {
+      const datos = { nombre: v.nombre.trim(), fecha_limite: v.fecha_limite, horas_estimadas: h };
+      const creada = await crearGestion(evento.id, datos);
+      onCreada({ estado: 'pendiente', nota: null, ...datos, ...creada });
+    } catch (err) {
+      if (err?.status === 404 || err?.status === 405) {
+        setError('Agregar gestiones a un evento ya guardado todavía no está disponible en el servidor.');
+      } else {
+        setError(mensajeDe(err, 'No se pudo agregar la gestión. Revisa tu conexión e inténtalo otra vez.'));
+      }
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={guardar} noValidate className="mt-4 space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <p className="text-sm font-medium text-gray-900">Nueva gestión</p>
+      {error && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </p>
+      )}
+      <Campo
+        id="nueva-nombre"
+        name="nombre"
+        label="Nombre de la gestión"
+        placeholder="Confirmar el catering"
+        autoFocus
+        value={v.nombre}
+        onChange={cambiar}
+        error={errores.nombre}
+      />
+      <Campo
+        id="nueva-fecha"
+        name="fecha_limite"
+        label="Fecha límite"
+        type="date"
+        min={hoy}
+        max={evento.fecha}
+        ayuda={`Desde hoy y hasta el día del evento (${formatearFecha(evento.fecha)}).`}
+        value={v.fecha_limite}
+        onChange={cambiar}
+        error={errores.fecha_limite}
+      />
+      <Campo
+        id="nueva-horas"
+        name="horas_estimadas"
+        label="Horas estimadas"
+        type="number"
+        min="0.5"
+        max="16"
+        step="0.5"
+        placeholder="2"
+        ayuda="Entre 0,5 y 16 horas."
+        value={v.horas_estimadas}
+        onChange={cambiar}
+        error={errores.horas_estimadas}
+      />
+      <div className="flex gap-2">
+        <button type="submit" disabled={guardando} className={btnPrimario}>
+          {guardando ? 'Guardando…' : 'Agregar'}
+        </button>
+        <button type="button" onClick={onCancelar} disabled={guardando} className={btnNeutral}>
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // ---------- Página ----------
 function EventoDetalle() {
   const { id } = useParams();
@@ -317,6 +417,9 @@ function EventoDetalle() {
   const [porEliminar, setPorEliminar] = useState(null); // { tipo: 'evento' } | { tipo: 'gestion', gestion }
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState('');
+  const location = useLocation();
+  // Si viene de "Agregar más gestiones" (pantalla de éxito de Crear), el formulario ya aparece abierto.
+  const [agregando, setAgregando] = useState(Boolean(location.state?.agregarGestion));
 
   useEffect(() => {
     let activo = true;
@@ -490,10 +593,18 @@ function EventoDetalle() {
 
             {/* Gestiones */}
             <article className="mt-4 rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="text-lg font-bold text-gray-900">Gestiones logísticas</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Marca cada gestión como hecha o pospuesta a medida que avanzas.
-              </p>
+              <h2 className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
+                Gestiones logísticas
+                <AyudaInfo
+                  nombre="Cómo actualizar tus gestiones"
+                  titulo="Cómo actualizar tus gestiones"
+                  lineas={[
+                    'Marca cada gestión como Hecha o Pospuesta a medida que avanzas.',
+                    'Con Editar cambias su nombre, fecha u horas.',
+                    'Puedes agregar gestiones nuevas cuando quieras.',
+                  ]}
+                />
+              </h2>
               {gestiones.length === 0 ? (
                 <p className="mt-4 text-sm text-gray-500">Este evento no tiene gestiones logísticas.</p>
               ) : (
@@ -511,6 +622,27 @@ function EventoDetalle() {
                     />
                   ))}
                 </ul>
+              )}
+
+              {agregando ? (
+                <FormNuevaGestion
+                  evento={evento}
+                  onCancelar={() => setAgregando(false)}
+                  onCreada={(g) => {
+                    setEvento((ev) => ({ ...ev, subtareas: [...ev.subtareas, g] }));
+                    setAgregando(false);
+                    mostrarAviso(`Se agregó la gestión "${g.nombre}".`);
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAgregando(true)}
+                  className="mt-4 flex items-center gap-1.5 rounded-md text-sm font-semibold text-brand hover:text-brand-dark
+                             focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                >
+                  <Plus size={16} aria-hidden="true" /> Agregar gestión logística
+                </button>
               )}
             </article>
           </>

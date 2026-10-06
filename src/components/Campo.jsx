@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import AyudaInfo from './AyudaInfo';
 
 // Campo de formulario con label visible, asterisco de obligatorio, ayuda y error inline (Guía de Diseño §4).
 // El foco usa un borde oscuro neutro: el rojo queda reservado para errores reales,
 // para que escribir en un campo no se confunda con "algo salió mal".
-function Campo({ id, label, error, ayuda, requerido = true, type = 'text', children, ...inputProps }) {
+// info: texto de apoyo que no es un requisito (ejemplos, explicaciones); va en un globo ⓘ junto a la etiqueta.
+// icono: componente de lucide que se dibuja dentro del campo, a la izquierda.
+function Campo({ id, label, error, ayuda, info, icono: Icono, requerido = true, type = 'text', children, ...inputProps }) {
   const [mostrar, setMostrar] = useState(false);
   const esPassword = type === 'password';
   const idAyuda = ayuda || children ? `${id}-ayuda` : undefined;
@@ -16,16 +19,26 @@ function Campo({ id, label, error, ayuda, requerido = true, type = 'text', child
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700">
-        {label}
-        {requerido && (
-          <span className="text-gray-400" aria-hidden="true">
-            {' '}*
-          </span>
-        )}
-      </label>
+      <div className="flex items-center gap-1">
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+          {label}
+          {requerido && (
+            <span className="text-gray-400" aria-hidden="true">
+              {' '}*
+            </span>
+          )}
+        </label>
+        {info && <AyudaInfo nombre={`Más información sobre ${label}`} texto={info} />}
+      </div>
 
       <div className="relative mt-1">
+        {Icono && (
+          <Icono
+            size={18}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+        )}
         <input
           id={id}
           type={esPassword && mostrar ? 'text' : type}
@@ -34,7 +47,7 @@ function Campo({ id, label, error, ayuda, requerido = true, type = 'text', child
           aria-describedby={[idAyuda, idError].filter(Boolean).join(' ') || undefined}
           className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900
             placeholder:text-gray-400 transition-colors focus:outline-none focus:ring-4
-            ${esPassword ? 'pr-11' : ''} ${bordes}`}
+            ${esPassword ? 'pr-11' : ''} ${Icono ? 'pl-10' : ''} ${bordes}`}
           {...inputProps}
         />
         {esPassword && (

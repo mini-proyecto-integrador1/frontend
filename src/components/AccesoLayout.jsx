@@ -1,238 +1,99 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { CalendarCheck, User, UserPlus } from 'lucide-react';
 import AlturaAnimada from './AlturaAnimada';
+import fondo from '../assets/inicio-bienvenida.webp';
 
-// Contenedor compartido por Login y Registro:
-// título, subtítulo, selector entre las dos opciones y tarjeta del formulario.
+// Inicio de sesión y registro.
+// Pantallas anchas (≥1280 px y apaisadas): la imagen de bienvenida ocupa todo el fondo (marca, saludo e ilustración están en
+// la imagen) y la tarjeta del formulario va en la zona libre de la derecha.
+// Celular, tableta y pantallas angostas o muy altas: la imagen se recortaría y su texto no se leería, así que se muestra una
+// cabecera compacta hecha en código y el formulario debajo.
 function AccesoLayout() {
   const { pathname } = useLocation();
   const esRegistro = pathname === '/registro';
-  const pestanaClase = ({ isActive }) =>
-    `flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-medium
-     transition-all duration-300
-     focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 ${
-       isActive
-         ? 'bg-white text-gray-900 shadow-md shadow-gray-900/5'
-         : 'text-gray-500 hover:text-gray-900'
-     }`;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50 px-4 py-12">
-
-      {/* =========================================================
-          FONDO DECORATIVO
-          ========================================================= */}
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
+    <div className="relative min-h-screen overflow-hidden bg-[#fbf3f2]">
+      {/* Fondo: imagen en pantallas grandes, degradado suave en pantallas pequeñas */}
+      <img
+        src={fondo}
+        alt=""
         aria-hidden="true"
-      >
+        className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover object-left ancho:block"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-red-200/60 to-transparent ancho:hidden"
+      />
 
-        {/* Blob principal superior izquierdo */}
-        <div
-          className="
-            absolute -left-40 -top-40
-            h-[450px] w-[450px]
-            rounded-full
-            bg-brand/42
-            blur-3xl
-          "
-        />
-
-        {/* Blob superior derecho */}
-        <div
-          className="
-            absolute -right-40 top-10
-            h-[420px] w-[420px]
-            rounded-full
-            bg-purple-400/45
-            blur-3xl
-          "
-        />
-
-        {/* Halo detrás del formulario */}
-        <div
-          className="
-            absolute left-1/2 top-1/2
-            h-[500px] w-[500px]
-            -translate-x-1/2
-            -translate-y-1/2
-            rounded-full
-            bg-brand/5
-            blur-3xl
-          "
-        />
-
-        {/* =====================================================
-            FIGURAS FLOTANTES
-            ===================================================== */}
-
-        {/* Círculo pequeño */}
-        <div
-          className="
-            float-organic
-            absolute left-[12%] top-[28%]
-            h-3 w-3
-            rounded-full
-            bg-brand/40
-          "
-        />
-        {/* Círculo grande inferior */}
-        <div
-          className="
-            float-organic
-            absolute left-[80%] top-[88%]
-            h-7 w-7
-            rounded-full
-            bg-brand/40
-          "
-          style={{ animationDelay: '2s' }}
-        />
-
-        {/* Círculo gigante */}
-        <div
-          className="
-            float-organic
-            absolute left-[18%] top-[16%]
-            h-10 w-10
-            rounded-full
-            bg-brand/60
-          "
-          style={{ animationDelay: '4s' }}
-        />
-
-        {/* Círculo pequeño derecho */}
-        <div
-          className="
-            float-organic
-            absolute right-[15%] top-[42%]
-            h-4 w-4
-            rounded-full
-            bg-purple-400/60
-          "
-          style={{ animationDelay: '1.5s' }}
-        />
-
-        {/* Círculo inferior */}
-        <div
-          className="
-            float-organic
-            absolute bottom-[18%] left-[20%]
-            h-2 w-2
-            rounded-full
-            bg-brand/40
-          "
-          style={{ animationDelay: '3s' }}
-        />
-
-        {/* Pequeño cuadrado rotado */}
-        <div
-          className="
-            float-organic
-            absolute right-[20%] top-[55%]
-            h-5 w-5
-            rounded-md
-            border-2
-            border-brand/20
-          "
-          style={{ animationDelay: '9s' }}
-        />
-
-        {/* circulo geométrico abajo del formulario */}
-        <div
-          className="
-            float-organic
-            absolute bottom-[18%] right-[40%]
-            h-6 w-6
-            rotate-12
-            rounded-full
-            border
-            border-purple-400/48
-          "
-          
-        />
-      </div>
-
-
-      {/* =========================================================
-          CONTENIDO PRINCIPAL
-          ========================================================= */}
-      <div className="relative z-10 mx-auto w-full max-w-md">
-
-        {/* Marca */}
-        <p className="text-center text-sm font-semibold tracking-wide text-brand">
-          En Punto
-        </p>
-
-        {/* Título */}
-        <h1
-          className="
-            mt-2
-            text-center
-            text-3xl
-            font-bold
-            tracking-tight
-            text-gray-900
-          "
-        >
-          {esRegistro ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}
+      <div className="relative z-10 mx-auto min-h-screen max-w-md px-4 py-10 sm:px-0 ancho:max-w-none ancho:p-0">
+        {/* El texto de la imagen, disponible para lectores de pantalla */}
+        <h1 className="sr-only">
+          En Punto. {esRegistro ? 'Crea tu cuenta.' : 'Bienvenido de nuevo.'} Organiza tus eventos y su plan logístico.
         </h1>
 
-        {/* Subtítulo */}
-        <p className="mt-2 text-center text-sm leading-6 text-gray-500">
-          {esRegistro ? 'Organiza tus eventos y su plan logístico en un solo lugar.' : 'Entra para ver tus gestiones del día.'}
-        </p>
-
-
-        {/* =======================================================
-            SELECTOR LOGIN / REGISTRO
-            ======================================================= */}
-        <nav
-          aria-label="Elegir cómo entrar"
-          className="
-            mt-8
-            flex
-            gap-1
-            rounded-xl
-            border
-            border-gray-200/80
-            bg-gray-100/70
-            p-1
-            backdrop-blur-md
-          "
-        >
-          <NavLink to="/login" className={pestanaClase}>
-            Iniciar sesión
-          </NavLink>
-
-          <NavLink to="/registro" className={pestanaClase}>
-            Crear cuenta
-          </NavLink>
-        </nav>
-
-
-        {/* =======================================================
-            TARJETA DEL FORMULARIO
-            ======================================================= */}
-        <div
-          className="
-            mt-5
-            rounded-2xl
-            border
-            border-white/70
-            bg-white/80
-            p-7
-            shadow-xl
-            shadow-gray-900/5
-            backdrop-blur-xl
-          "
-        >
-          <AlturaAnimada><Outlet /></AlturaAnimada>
+        {/* Cabecera compacta solo en pantallas pequeñas */}
+        <div className="mb-8 ancho:hidden" aria-hidden="true">
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand text-white shadow-lg shadow-red-600/30">
+              <CalendarCheck size={26} />
+            </span>
+            <span className="leading-tight">
+              <span className="block text-xl font-bold text-gray-900">En Punto</span>
+              <span className="block text-sm text-gray-500">Tus eventos, a tiempo</span>
+            </span>
+          </div>
+          <p className="mt-6 text-3xl font-extrabold tracking-tight text-gray-900">
+            {esRegistro ? (
+              <>
+                Crea tu <span className="text-brand">cuenta</span>
+              </>
+            ) : (
+              <>
+                Bienvenido <span className="text-brand">de nuevo</span>
+              </>
+            )}
+          </p>
         </div>
 
+        {/* Tarjeta del formulario (columna derecha en pantallas grandes) */}
+        <section className="tarjeta-acceso w-full">
+          <div className="relative mx-auto rounded-3xl bg-white p-8 shadow-2xl shadow-red-900/10 sm:p-10 ancho:px-12 ancho:py-11">
+            <span className="absolute inset-y-6 -left-1.5 w-1.5 rounded-l-full bg-red-300" aria-hidden="true" />
+            <div className="text-center">
+              <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-red-50 text-brand">
+                {esRegistro ? <UserPlus size={28} aria-hidden="true" /> : <User size={28} aria-hidden="true" />}
+              </span>
+              <h2 className="mt-4 text-2xl font-bold text-gray-900">{esRegistro ? 'Crear cuenta' : 'Iniciar sesión'}</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                {esRegistro ? 'Solo te tomará un minuto.' : 'Ingresa con tu correo y contraseña para continuar.'}
+              </p>
+            </div>
+
+            <div className="mt-7">
+              <AlturaAnimada>
+                <Outlet />
+              </AlturaAnimada>
+            </div>
+
+            <div className="mt-6 flex items-center gap-3 text-sm text-gray-500">
+              <span className="h-px flex-1 bg-gray-200" aria-hidden="true" />
+              <span>
+                {esRegistro ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?'}{' '}
+                <Link
+                  to={esRegistro ? '/login' : '/registro'}
+                  className="rounded font-semibold text-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                >
+                  {esRegistro ? 'Inicia sesión' : 'Crea una'}
+                </Link>
+              </span>
+              <span className="h-px flex-1 bg-gray-200" aria-hidden="true" />
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
 export default AccesoLayout;
-
-

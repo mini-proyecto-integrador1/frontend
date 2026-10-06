@@ -4,3 +4,20 @@
   --color-brand: #dc2626;
   --color-brand-dark: #b91c1c;
 }
+/* Pantalla ancha y apaisada: ahí la imagen de bienvenida del inicio cabe sin que la tarjeta tape su texto. */
+@custom-variant ancho (@media (min-width: 1280px) and (min-aspect-ratio: 8/5));
+
+/* Inicio de sesión con imagen de fondo: la tarjeta se pone justo donde termina el texto de la imagen.
+   La imagen (inicio-bienvenida, 1713 x 918) se escala con object-cover, así que su ancho en pantalla es
+   max(100vw, 100vh * 1713/918). El texto de la imagen termina en el 51,2 % de ese ancho.
+   Si cambian la imagen, hay que actualizar estos dos números: 51.2vw y 95.5vh (= 51.2 * 1713/918). */
+@media (min-width: 1280px) and (min-aspect-ratio: 8/5) {
+  .tarjeta-acceso {
+    --fin-texto: max(51.2vw, 95.5vh);
+    position: absolute;
+    top: 50%;
+    left: calc(var(--fin-texto) + 2.5rem);
+    width: min(36rem, calc(100vw - var(--fin-texto) - 5rem));
+    transform: translateY(-50%);
+  }
+}
