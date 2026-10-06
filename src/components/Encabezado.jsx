@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { CalendarCheck, LogOut } from 'lucide-react';
+import { CalendarCheck, Gauge, LogOut } from 'lucide-react';
 import { clearToken } from '../auth';
 import { obtenerPerfil } from '../authService';
+import { useLimite } from '../limiteContexto';
+import ModalLimite from './ModalLimite';
+import Aviso from './Aviso';
 
 const enlaces = [
   { to: '/hoy', texto: 'Hoy' },
@@ -14,6 +17,9 @@ const enlaces = [
 function Encabezado() {
   const navigate = useNavigate();
   const [nombre, setNombre] = useState('');
+  const { limite } = useLimite();
+  const [editandoLimite, setEditandoLimite] = useState(false);
+  const [aviso, setAviso] = useState('');
 
   useEffect(() => {
     let activo = true;
@@ -59,9 +65,24 @@ function Encabezado() {
 
         <div className="ml-auto flex items-center gap-3">
           {/* Espacio reservado para el saludo: así no empuja los botones cuando termina de cargar */}
-          <span className="hidden min-w-[7rem] text-right text-sm text-gray-600 md:inline">
+          <span className="hidden min-w-[7rem] text-right text-sm text-gray-600 lg:inline">
             {nombre ? `Hola, ${nombre}` : '\u00a0'}
           </span>
+          {/* Límite diario siempre a la vista; clic para cambiarlo (Sprint 3 · C2) */}
+          <button
+            type="button"
+            onClick={() => setEditandoLimite(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium
+                       text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          >
+            <Gauge size={16} aria-hidden="true" />
+            <span>
+              Límite diario:{' '}
+              <strong className="inline-block min-w-[2.25rem] text-left font-semibold text-gray-900">
+                {limite ? `${limite} h` : '–'}
+              </strong>
+            </span>
+          </button>
           <button
             type="button"
             onClick={cerrarSesion}
@@ -72,6 +93,16 @@ function Encabezado() {
           </button>
         </div>
       </div>
+      <ModalLimite
+        abierto={editandoLimite}
+        onCerrar={() => setEditandoLimite(false)}
+        onGuardado={(msg) => {
+          setEditandoLimite(false);
+          setAviso(msg);
+          setTimeout(() => setAviso(''), 3500);
+        }}
+      />
+      <Aviso texto={aviso} />
     </header>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarClock, CalendarDays, ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   actualizarEvento,
   actualizarGestion,
@@ -16,6 +16,8 @@ import Campo from '../components/Campo';
 import SelectorTipo from '../components/SelectorTipo';
 import Confirmar from '../components/Confirmar';
 import AyudaInfo from '../components/AyudaInfo';
+import ModalReprogramar from '../components/ModalReprogramar';
+import { describirSobrecarga, leerSobrecarga } from '../sobrecargaUtils';
 
 const btnPrimario =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50 ' +
@@ -128,7 +130,7 @@ function FormEvento({ evento, onGuardado, onCancelar }) {
 }
 
 // ---------- Una gestión: estado, edición y eliminación ----------
-function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar }) {
+function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar, onReprogramar }) {
   const [editando, setEditando] = useState(false);
   const [v, setV] = useState({ nombre: '', fecha_limite: '', horas_estimadas: '' });
   const [errores, setErrores] = useState({});
@@ -188,7 +190,12 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar }) {
       onCambio({ ...gestion, ...actualizada });
       setEditando(false);
     } catch (err) {
-      setError(mensajeDe(err, 'No se pudieron guardar los cambios. Inténtalo otra vez.'));
+      const sobrecarga = leerSobrecarga(err);
+      setError(
+        sobrecarga
+          ? `${describirSobrecarga(sobrecarga[0])} Usa "Reprogramar" para moverla o reducir sus horas.`
+          : mensajeDe(err, 'No se pudieron guardar los cambios. Inténtalo otra vez.')
+      );
     } finally {
       setOcupado(false);
     }
@@ -257,6 +264,16 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar }) {
           </p>
         </div>
         <div className="flex gap-1">
+          {gestion.estado !== 'hecho' && (
+            <button
+              type="button"
+              onClick={() => onReprogramar(gestion)}
+              className={btnNeutral}
+              aria-label={`Reprogramar ${gestion.nombre}`}
+            >
+              <CalendarClock size={14} aria-hidden="true" /> <span className="hidden sm:inline">Reprogramar</span>
+            </button>
+          )}
           <button type="button" onClick={abrirEdicion} className={btnNeutral} aria-label={`Editar ${gestion.nombre}`}>
             <Pencil size={14} aria-hidden="true" /> <span className="hidden sm:inline">Editar</span>
           </button>
@@ -337,8 +354,16 @@ function FormNuevaGestion({ evento, onCreada, onCancelar }) {
       const creada = await crearGestion(evento.id, datos);
       onCreada({ estado: 'pendiente', nota: null, ...datos, ...creada });
     } catch (err) {
-      if (err?.status === 404 || err?.status === 405) {
-        setError('Agregar gestiones a un evento ya guardado todavía no está disponible en el servidor.');
+      const sobrecarga = leerSobrecarga(err);
+      if (sobrecarga) {
+        const c = sobrecarga[0];
+        setError(
+          `${describirSobrecarga(c)} ` +
+            (c.diaSugerido ? `El ${formatearFecha(c.diaSugerido)} sí cabe. ` : '') +
+            (c.disponibles >= 0.5 ? `También puedes dejarla en ${formatearHoras(c.disponibles)} h.` : '')
+        );
+      } else if (err?.status === 404) {
+        setError('No encontramos este evento. Puede que se haya eliminado.');
       } else {
         setError(mensajeDe(err, 'No se pudo agregar la gestión. Revisa tu conexión e inténtalo otra vez.'));
       }
@@ -415,6 +440,7 @@ function EventoDetalle() {
   const [porEliminar, setPorEliminar] = useState(null); // { tipo: 'evento' } | { tipo: 'gestion', gestion }
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState('');
+  const [reprogramando, setReprogramando] = useState(null);
   const location = useLocation();
   // Si viene de "Agregar más gestiones" (pantalla de éxito de Crear), el formulario ya aparece abierto.
   const [agregando, setAgregando] = useState(Boolean(location.state?.agregarGestion));
@@ -598,7 +624,8 @@ function EventoDetalle() {
                   titulo="Cómo actualizar tus gestiones"
                   lineas={[
                     'Marca cada gestión como Hecha o Pospuesta a medida que avanzas.',
-                    'Con Editar cambias su nombre, fecha u horas.',
+                    'Usa Reprogramar para cambiarla de día; te avisamos si ese día se pasa de tu límite.',
+                    'Con Editar cambias su nombre u horas.',
                     'Puedes agregar gestiones nuevas cuando quieras.',
                   ]}
                 />
@@ -613,6 +640,7 @@ function EventoDetalle() {
                       gestion={g}
                       fechaEvento={evento.fecha}
                       onCambio={reemplazarGestion}
+                      onReprogramar={setReprogramando}
                       onEliminar={(gestion) => {
                         setErrorEliminar('');
                         setPorEliminar({ tipo: 'gestion', gestion });
@@ -653,6 +681,18 @@ function EventoDetalle() {
           <p className="rounded-lg bg-gray-900 px-4 py-2 text-sm text-white shadow-lg">{aviso}</p>
         )}
       </div>
+
+      <ModalReprogramar
+        abierto={Boolean(reprogramando)}
+        gestion={reprogramando}
+        fechaEvento={evento?.fecha}
+        onCerrar={() => setReprogramando(null)}
+        onListo={(actualizada, mensaje) => {
+          reemplazarGestion(actualizada);
+          setReprogramando(null);
+          mostrarAviso(mensaje);
+        }}
+      />
 
       <Confirmar
         abierto={Boolean(porEliminar)}

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { CalendarClock, X } from 'lucide-react';
 import { getGestionesHoy } from '../hoyService';
 import { getEventos } from '../eventoService';
+import ModalReprogramar from '../components/ModalReprogramar';
+import Aviso from '../components/Aviso';
+import { useLimite } from '../limiteContexto';
 import AyudaInfo from '../components/AyudaInfo';
 import {
   agruparGestiones,
@@ -88,6 +91,9 @@ function Hoy() {
   const [gestiones, setGestiones] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [intento, setIntento] = useState(0);
+  const [reprogramando, setReprogramando] = useState(null); // gestión abierta en el modal
+  const [aviso, setAviso] = useState('');
+  const { limite } = useLimite();
 
   // Opciones del filtro de evento.
   useEffect(() => {
@@ -147,6 +153,21 @@ function Hoy() {
   const gruposVisibles = soloHechas ? [GRUPO_HECHAS] : GRUPOS;
   const total = gruposVisibles.reduce((n, g) => n + grupos[g.clave].length, 0);
   const nombreEvento = eventos.find((e) => String(e.id) === filtroEvento)?.nombre;
+  const fechaDeEvento = (id) => eventos.find((e) => e.id === id)?.fecha;
+
+  // Carga de hoy frente al límite (solo con la lista completa; con filtro de evento sería parcial).
+  const horasHoy = gestiones
+    .filter((g) => g.fecha_limite === hoy && g.estado !== 'hecho')
+    .reduce((n, g) => n + (Number(g.horas_estimadas) || 0), 0);
+  const mostrarCarga = Boolean(limite) && !filtroEvento && !soloHechas;
+  const sobrecargaHoy = mostrarCarga && horasHoy > limite;
+
+  function alReprogramar(_actualizada, mensaje) {
+    setReprogramando(null);
+    setAviso(mensaje);
+    setTimeout(() => setAviso(''), 3500);
+    setIntento((n) => n + 1); // recarga /hoy: la gestión cambia de grupo según su nueva fecha
+  }
 
   return (
     <div className="px-4 py-8">
@@ -282,6 +303,14 @@ function Hoy() {
                       >
                         {lista.length}
                       </span>
+                      {grupo.clave === 'hoy' && mostrarCarga && (
+                        <span
+                          className={`ml-auto text-sm ${sobrecargaHoy ? 'font-semibold text-red-800' : 'text-gray-600'}`}
+                        >
+                          {formatearHoras(horasHoy)} h de {formatearHoras(limite)} h
+                          {sobrecargaHoy && ` · te pasas por ${formatearHoras(horasHoy - limite)} h`}
+                        </span>
+                      )}
                     </div>
 
                     {lista.length === 0 ? (
@@ -316,6 +345,17 @@ function Hoy() {
                               <p className="text-gray-500">
                                 {formatearFecha(g.fecha_limite)} · {formatearHoras(g.horas_estimadas)} h
                               </p>
+                              {g.estado !== 'hecho' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setReprogramando(g)}
+                                  aria-label={`Reprogramar ${g.nombre}`}
+                                  className="mt-2 inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs
+                                             font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                                >
+                                  <CalendarClock size={14} aria-hidden="true" /> Reprogramar
+                                </button>
+                              )}
                             </div>
                           </li>
                         ))}
@@ -328,6 +368,14 @@ function Hoy() {
           </>
         )}
       </div>
+      <ModalReprogramar
+        abierto={Boolean(reprogramando)}
+        gestion={reprogramando}
+        fechaEvento={reprogramando ? fechaDeEvento(reprogramando.evento_id) : undefined}
+        onCerrar={() => setReprogramando(null)}
+        onListo={alReprogramar}
+      />
+      <Aviso texto={aviso} />
     </div>
   );
 }

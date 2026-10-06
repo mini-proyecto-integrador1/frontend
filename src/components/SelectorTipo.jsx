@@ -5,12 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
-  HeartHandshake,
-  House,
-  Palette,
   PartyPopper,
   Plus,
-  Trophy,
 } from 'lucide-react';
 
 // Aqui definimos los tipos de evento predefinidos, con su valor y el icono correspondiente. Se usan en el selector de tipo de evento.
