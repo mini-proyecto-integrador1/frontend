@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ArrowRight, CalendarClock, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CalendarClock, Clock, Info } from 'lucide-react';
 import Modal from './Modal';
 import Campo from './Campo';
 import { actualizarGestion } from '../eventoService';
@@ -125,13 +126,33 @@ function ContenidoReprogramar({ gestion, fechaEvento, onCerrar, onListo }) {
               Te sugerimos el {formatearFecha(conflicto.diaSugerido)}: ese día sí cabe.
             </p>
           )}
+          {tope && (
+            <div className="mb-4 flex gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              <Info size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <p>
+                Tu evento es el <strong>{formatearFecha(tope)}</strong>, así que puedes moverla hasta ese día.
+                {gestion.evento_id ? (
+                  <>
+                    {' '}
+                    ¿Necesitas más tiempo?{' '}
+                    <Link to={`/evento/${gestion.evento_id}`} onClick={onCerrar} className="font-semibold underline">
+                      Cambia la fecha del evento
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  ' Si necesitas más tiempo, primero cambia la fecha del evento con "Editar".'
+                )}
+              </p>
+            </div>
+          )}
           <Campo
             id="reprogramar-fecha"
             label="Nueva fecha"
             type="date"
             min={hoy}
             max={tope}
-            ayuda={tope ? `Desde hoy y hasta el día del evento (${formatearFecha(tope)}).` : 'Desde hoy en adelante.'}
+            ayuda={tope ? `Entre hoy y el ${formatearFecha(tope)}.` : 'Desde hoy en adelante.'}
             value={fecha}
             onChange={(e) => {
               setFecha(e.target.value);
