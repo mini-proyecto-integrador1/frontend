@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Plus, X } from 'lucide-react';
 import { createEvento } from '../eventoService';
 import Campo from '../components/Campo';
+import SelectorTipo from '../components/SelectorTipo';
 import AyudaInfo from '../components/AyudaInfo';
 
 const todayStr = new Date().toISOString().split('T')[0];
@@ -41,7 +42,7 @@ function reducer(state, action) {
 function validar(values, subtareas) {
   const errors = {};
   if (!values.nombre.trim()) errors.nombre = 'Escribe el nombre del evento.';
-  if (!values.tipo.trim()) errors.tipo = 'Indica el tipo de evento.';
+  if (!values.tipo.trim()) errors.tipo = 'Elige el tipo de evento, o escríbelo en "Otro".';
   if (!values.fecha) errors.fecha = 'Selecciona la fecha del evento.';
   else if (values.fecha < todayStr) errors.fecha = 'La fecha no puede ser en el pasado.';
   else if (subtareas.some((s) => s.fecha_limite > values.fecha)) {
@@ -283,12 +284,11 @@ function Crear() {
 
           <Campo id="evento-nombre" label="Nombre" placeholder="Boda Camila y Andrés" {...campo('nombre')} />
 
-          <Campo
+          <SelectorTipo
             id="evento-tipo"
-            label="Tipo"
-            placeholder="Social"
-            info="Por ejemplo: social, corporativo, cultural o deportivo."
-            {...campo('tipo')}
+            value={state.values.tipo}
+            error={state.errors.tipo}
+            onChange={(valor) => dispatch({ type: 'SET_FIELD', field: 'tipo', value: valor })}
           />
 
           <Campo
