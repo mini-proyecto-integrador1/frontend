@@ -44,7 +44,7 @@ function Encabezado() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
         <NavLink to="/hoy" className="flex items-center gap-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white">
             <CalendarCheck size={20} aria-hidden="true" />
@@ -65,7 +65,7 @@ function Encabezado() {
 
         <div className="ml-auto flex items-center gap-3">
           {/* Espacio reservado para el saludo: así no empuja los botones cuando termina de cargar */}
-          <span className="hidden min-w-[7rem] text-right text-sm text-gray-600 lg:inline">
+          <span className="hidden min-w-[7rem] text-right text-sm text-gray-600 xl:inline">
             {nombre ? `Hola, ${nombre}` : '\u00a0'}
           </span>
           {/* Límite diario siempre a la vista; clic para cambiarlo (Sprint 3 · C2) */}
