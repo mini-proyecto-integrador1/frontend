@@ -8,14 +8,17 @@ import Login from './pages/Login';
 import Registro from './pages/Registro';
 import { RutaProtegida, RutaPublica } from './components/RutaProtegida';
 import Encabezado from './components/Encabezado';
+import LimiteProvider from './components/LimiteProvider';
 import AccesoLayout from './components/AccesoLayout';
 
 // Encabezado + contenido. Solo se muestra cuando hay sesión.
 function LayoutPrivado() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Encabezado />
-      <Outlet />
+      <LimiteProvider>
+        <Encabezado />
+        <Outlet />
+      </LimiteProvider>
     </div>
   );
 }

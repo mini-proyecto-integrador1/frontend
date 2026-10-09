@@ -49,3 +49,10 @@ export const eliminarGestion = (id) => pedir(`/api/subtareas/${id}/`, { method: 
 // POST /api/eventos/<id>/subtareas/  body { nombre, fecha_limite, horas_estimadas }  -> 201 con la gestión
 export const crearGestion = (eventoId, datos) =>
   pedir(`/api/eventos/${eventoId}/subtareas/`, { method: 'POST', body: datos });
+
+// --- Límite diario del organizador (Sprint 3) ---
+// GET /api/perfil/limite/  -> { limite_horas_diarias: 6 }
+// PUT /api/perfil/limite/  body { limite_horas_diarias: n }  (entero de 1 a 16; 400 si no)
+export const getLimite = () => pedir('/api/perfil/limite/');
+export const guardarLimite = (horas) =>
+  pedir('/api/perfil/limite/', { method: 'PUT', body: { limite_horas_diarias: horas } });

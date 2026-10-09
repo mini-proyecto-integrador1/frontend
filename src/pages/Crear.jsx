@@ -2,6 +2,7 @@ import { useImperativeHandle, useReducer, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Plus, X } from 'lucide-react';
 import { createEvento } from '../eventoService';
+import { describirSobrecarga, leerSobrecarga } from '../sobrecargaUtils';
 import Campo from '../components/Campo';
 import SelectorTipo from '../components/SelectorTipo';
 import AyudaInfo from '../components/AyudaInfo';
@@ -224,6 +225,15 @@ function Crear() {
         navigate('/login', { replace: true });
         return;
       }
+      const sobrecarga = leerSobrecarga(err);
+      if (sobrecarga) {
+        // Una línea por cada día que se pasa del límite, con sus cifras (Sprint 3 · C3).
+        setErrorGeneral(
+          ['Algunas gestiones dejan días por encima de tu límite diario:', ...sobrecarga.map(describirSobrecarga),
+            'Cambia sus fechas o reduce sus horas antes de guardar.'].join('\n')
+        );
+        return;
+      }
       setErrorGeneral('No se pudo guardar el evento. Revisa tu conexión e inténtalo otra vez.');
     } finally {
       setEnviando(false);
@@ -361,7 +371,7 @@ function Crear() {
         </div>
 
         {errorGeneral && (
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div role="alert" className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
             {errorGeneral}
           </div>
         )}
