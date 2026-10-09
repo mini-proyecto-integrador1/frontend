@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 // Diálogo genérico: fondo oscuro, Escape para cerrar, foco al abrir y devolución del foco al cerrar.
@@ -23,7 +24,9 @@ function Modal({ abierto, titulo, descripcion, onCerrar, bloqueado = false, rol 
 
   if (!abierto) return null;
 
-  return (
+  // Se dibuja directo en <body>: así ningún contenedor (p. ej. el encabezado fijo con desenfoque)
+  // puede recortar el fondo oscuro ni mover el diálogo.
+  return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center bg-gray-900/40 p-4">
       <div
         ref={panelRef}
@@ -57,7 +60,8 @@ function Modal({ abierto, titulo, descripcion, onCerrar, bloqueado = false, rol 
         )}
         <div className="mt-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

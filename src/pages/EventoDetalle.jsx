@@ -130,7 +130,7 @@ function FormEvento({ evento, onGuardado, onCancelar }) {
 }
 
 // ---------- Una gestión: estado, edición y eliminación ----------
-function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar, onReprogramar }) {
+function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
   const [editando, setEditando] = useState(false);
   const [v, setV] = useState({ nombre: '', fecha_limite: '', horas_estimadas: '' });
   const [errores, setErrores] = useState({});
@@ -156,7 +156,6 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar, onReprogramar
   function abrirEdicion() {
     setV({
       nombre: gestion.nombre,
-      fecha_limite: gestion.fecha_limite,
       horas_estimadas: String(Number(gestion.horas_estimadas)),
     });
     setErrores({});
@@ -174,9 +173,6 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar, onReprogramar
     const errs = {};
     const h = parseFloat(v.horas_estimadas);
     if (!v.nombre.trim()) errs.nombre = 'Escribe el nombre de la gestión.';
-    if (!v.fecha_limite) errs.fecha_limite = 'Selecciona la fecha límite.';
-    else if (v.fecha_limite > fechaEvento)
-      errs.fecha_limite = `Debe ser antes o el mismo día del evento (${formatearFecha(fechaEvento)}).`;
     if (isNaN(h) || h <= 0 || h > 16) errs.horas_estimadas = 'Escribe un valor entre 0,5 y 16 horas.';
     if (Object.keys(errs).length) return setErrores(errs);
 
@@ -184,7 +180,6 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar, onReprogramar
     try {
       const actualizada = await actualizarGestion(gestion.id, {
         nombre: v.nombre.trim(),
-        fecha_limite: v.fecha_limite,
         horas_estimadas: h,
       });
       onCambio({ ...gestion, ...actualizada });
@@ -193,7 +188,7 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar, onReprogramar
       const sobrecarga = leerSobrecarga(err);
       setError(
         sobrecarga
-          ? `${describirSobrecarga(sobrecarga[0])} Usa "Reprogramar" para moverla o reducir sus horas.`
+          ? `${describirSobrecarga(sobrecarga[0])} Baja las horas o usa "Reprogramar" para moverla a otro día.`
           : mensajeDe(err, 'No se pudieron guardar los cambios. Inténtalo otra vez.')
       );
     } finally {
@@ -213,17 +208,10 @@ function FilaGestion({ gestion, fechaEvento, onCambio, onEliminar, onReprogramar
             </p>
           )}
           <Campo id={`g-nombre-${gestion.id}`} name="nombre" label="Nombre de la gestión" value={v.nombre} onChange={cambiar} error={errores.nombre} />
-          <Campo
-            id={`g-fecha-${gestion.id}`}
-            name="fecha_limite"
-            label="Fecha límite"
-            type="date"
-            max={fechaEvento}
-            ayuda={`Hasta el día del evento (${formatearFecha(fechaEvento)}).`}
-            value={v.fecha_limite}
-            onChange={cambiar}
-            error={errores.fecha_limite}
-          />
+          {/* La fecha se cambia con "Reprogramar" (con aviso de tope y de sobrecarga); aquí solo nombre y horas. */}
+          <p className="text-sm text-gray-600">
+            Vence el {formatearFecha(gestion.fecha_limite)}. Para cambiar la fecha usa <strong>Reprogramar</strong>.
+          </p>
           <Campo
             id={`g-horas-${gestion.id}`}
             name="horas_estimadas"
@@ -638,7 +626,6 @@ function EventoDetalle() {
                     <FilaGestion
                       key={g.id}
                       gestion={g}
-                      fechaEvento={evento.fecha}
                       onCambio={reemplazarGestion}
                       onReprogramar={setReprogramando}
                       onEliminar={(gestion) => {
