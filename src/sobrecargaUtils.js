@@ -22,6 +22,12 @@ export function leerSobrecarga(err) {
   return conflictos.length ? conflictos : null;
 }
 
+// Horas que todavía caben, redondeadas hacia abajo a medias horas (los campos usan pasos de 0,5).
+// maximoQueCabe(2.7) -> 2.5 ; maximoQueCabe(0.3) -> 0
+export function maximoQueCabe(horasLibres) {
+  return Math.max(0, Math.floor(Number(horasLibres) * 2) / 2);
+}
+
 // "El 08/10 quedarías con 9 h planificadas y tu límite es 6 h."
 export function describirSobrecarga(c) {
   return `El ${formatearFecha(c.fecha)} quedarías con ${formatearHoras(c.planificadas)} h planificadas y tu límite es ${formatearHoras(c.limite)} h.`;
