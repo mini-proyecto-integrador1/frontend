@@ -32,3 +32,23 @@ export function maximoQueCabe(horasLibres) {
 export function describirSobrecarga(c) {
   return `El ${formatearFecha(c.fecha)} quedarías con ${formatearHoras(c.planificadas)} h planificadas y tu límite es ${formatearHoras(c.limite)} h.`;
 }
+
+// Días (de hoy en adelante) cuyas gestiones por hacer suman más que el límite.
+// Sirve cuando el organizador BAJA su límite: el backend no rechaza ese cambio, así que la app
+// tiene que mostrarle qué días quedaron sobrecargados para que los resuelva.
+// gestiones: lista de /api/hoy/ (todas las del organizador). Devuelve [{ fecha, horas, exceso, gestiones }].
+export function diasSobrecargados(gestiones, limite, desde) {
+  if (limite == null) return [];
+  const porDia = new Map();
+  for (const g of gestiones || []) {
+    if (g.estado === 'hecho' || g.fecha_limite < desde) continue;
+    const dia = porDia.get(g.fecha_limite) || { fecha: g.fecha_limite, horas: 0, gestiones: [] };
+    dia.horas += Number(g.horas_estimadas) || 0;
+    dia.gestiones.push(g);
+    porDia.set(g.fecha_limite, dia);
+  }
+  return [...porDia.values()]
+    .filter((d) => d.horas > limite)
+    .map((d) => ({ ...d, exceso: d.horas - limite }))
+    .sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+}
