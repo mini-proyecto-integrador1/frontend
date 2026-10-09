@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CalendarClock, X } from 'lucide-react';
+import { AlertTriangle, CalendarClock, X } from 'lucide-react';
 import { getGestionesHoy } from '../hoyService';
 import { getEventos } from '../eventoService';
 import ModalReprogramar from '../components/ModalReprogramar';
 import Aviso from '../components/Aviso';
 import { useLimite } from '../limiteContexto';
 import AyudaInfo from '../components/AyudaInfo';
+import { diasSobrecargados } from '../sobrecargaUtils';
 import {
   agruparGestiones,
   compararGestiones,
@@ -162,6 +163,15 @@ function Hoy() {
   const mostrarCarga = Boolean(limite) && !filtroEvento && !soloHechas;
   const sobrecargaHoy = mostrarCarga && horasHoy > limite;
 
+  // Días (hoy o después) que pasan del límite. Pasa sobre todo cuando el organizador baja su límite:
+  // las gestiones ya planificadas no se mueven solas, así que se le muestra qué días resolver.
+  // Solo con la lista completa (sin filtros); con filtros la suma sería parcial.
+  const diasPasados = useMemo(
+    () => (limite && !hayFiltros ? diasSobrecargados(gestiones, limite, hoy) : []),
+    [gestiones, limite, hoy, hayFiltros]
+  );
+  const excesoDe = (fecha) => diasPasados.find((d) => d.fecha === fecha);
+
   function alReprogramar(_actualizada, mensaje) {
     setReprogramando(null);
     setAviso(mensaje);
@@ -286,6 +296,42 @@ function Hoy() {
               <AyudaInfo etiqueta="Ordenado por urgencia" titulo="Así se ordenan tus gestiones" lineas={REGLA_PRIORIDAD} />
             </div>
 
+            {diasPasados.length > 0 && (
+              <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                <p className="flex items-center gap-2 font-semibold">
+                  <AlertTriangle size={16} aria-hidden="true" />
+                  {diasPasados.length === 1 ? 'Un día pasa' : `${diasPasados.length} días pasan`} de tu límite diario de{' '}
+                  {formatearHoras(limite)} h
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {diasPasados.map((d) => (
+                    <li key={d.fecha}>
+                      <span>
+                        <strong>{formatearFecha(d.fecha)}</strong>: {formatearHoras(d.horas)} h de {formatearHoras(limite)} h,
+                        te pasas por {formatearHoras(d.exceso)} h.
+                      </span>
+                      <span className="mt-1 flex flex-wrap gap-1.5">
+                        {d.gestiones.map((g) => (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => setReprogramando(g)}
+                            className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs
+                                       font-medium text-gray-800 hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                          >
+                            <CalendarClock size={13} aria-hidden="true" /> Reprogramar {g.nombre} ({formatearHoras(g.horas_estimadas)} h)
+                          </button>
+                        ))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-red-800">
+                  Mueve alguna gestión a otro día, baja sus horas en el evento o sube tu límite diario.
+                </p>
+              </div>
+            )}
+
             <div className="mt-6 space-y-8">
               {gruposVisibles.map((grupo) => {
                 const lista = grupos[grupo.clave];
@@ -337,6 +383,12 @@ function Hoy() {
                                 )}
                               </p>
                               <p className="text-sm text-gray-500">{g.evento_nombre}</p>
+                              {g.estado !== 'hecho' && excesoDe(g.fecha_limite) && grupo.clave !== 'hoy' && (
+                                <p className="mt-1 inline-flex items-center gap-1 rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-800">
+                                  <AlertTriangle size={12} aria-hidden="true" />
+                                  Ese día: {formatearHoras(excesoDe(g.fecha_limite).horas)} h de {formatearHoras(limite)} h
+                                </p>
+                              )}
                             </div>
                             <div className="shrink-0 text-right text-sm">
                               <p className={`font-medium ${grupo.plazo}`}>
