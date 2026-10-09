@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { CalendarClock, CheckCircle2, Clock, Pencil, Plus, X } from 'lucide-react';
 import { createEvento } from '../eventoService';
 import { leerSobrecarga, maximoQueCabe } from '../sobrecargaUtils';
-import { formatearFecha, formatearHoras } from '../hoyUtils';
+import { fechaLocalHoy, formatearFecha, formatearHoras } from '../hoyUtils';
 import { useLimite } from '../limiteContexto';
 import Campo from '../components/Campo';
 import ModalLimite from '../components/ModalLimite';
 import SelectorTipo from '../components/SelectorTipo';
 import AyudaInfo from '../components/AyudaInfo';
 
-const todayStr = new Date().toISOString().split('T')[0];
 
 // AAAA-MM-DD -> DD/MM/AAAA, para mostrar fechas como las lee el organizador.
 const formatoFecha = (iso) => (iso ? iso.split('-').reverse().join('/') : '');
@@ -53,7 +52,7 @@ function validar(values, subtareas) {
   if (!values.nombre.trim()) errors.nombre = 'Escribe el nombre del evento.';
   if (!values.tipo.trim()) errors.tipo = 'Elige el tipo de evento, o escríbelo en "Otro".';
   if (!values.fecha) errors.fecha = 'Selecciona la fecha del evento.';
-  else if (values.fecha < todayStr) errors.fecha = 'La fecha no puede ser en el pasado.';
+  else if (values.fecha < fechaLocalHoy()) errors.fecha = 'La fecha no puede ser en el pasado.';
   else if (subtareas.some((s) => s.fecha_limite > values.fecha)) {
     errors.fecha = 'Hay una gestión con fecha límite posterior a esta fecha.';
   }
@@ -74,7 +73,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef, inicial, i
     const errs = {};
     if (!nombre.trim()) errs.nombre = 'Escribe el nombre de la gestión.';
     if (!fecha) errs.fecha = 'Selecciona la fecha límite.';
-    else if (fecha < todayStr) errs.fecha = 'La fecha límite no puede ser en el pasado.';
+    else if (fecha < fechaLocalHoy()) errs.fecha = 'La fecha límite no puede ser en el pasado.';
     else if (fechaTope && fecha > fechaTope) {
       errs.fecha = `Debe ser antes o el mismo día del evento (${formatoFecha(fechaTope)}).`;
     }
@@ -144,7 +143,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef, inicial, i
         id={`${idBase}-fecha`}
         label="Fecha límite"
         type="date"
-        min={todayStr}
+        min={fechaLocalHoy()}
         max={fechaTope || undefined}
         ayuda={fechaTope ? `Hasta el día del evento (${formatoFecha(fechaTope)}).` : 'Desde hoy en adelante.'}
         value={fecha}
@@ -443,7 +442,7 @@ function Crear() {
             id="evento-fecha"
             label="Fecha"
             type="date"
-            min={todayStr}
+            min={fechaLocalHoy()}
             ayuda="Desde hoy en adelante."
             {...campo('fecha')}
           />
