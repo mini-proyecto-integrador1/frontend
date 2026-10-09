@@ -1,9 +1,12 @@
 import { useImperativeHandle, useReducer, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Plus, X } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Clock, Pencil, Plus, X } from 'lucide-react';
 import { createEvento } from '../eventoService';
-import { describirSobrecarga, leerSobrecarga } from '../sobrecargaUtils';
+import { leerSobrecarga, maximoQueCabe } from '../sobrecargaUtils';
+import { formatearFecha, formatearHoras } from '../hoyUtils';
+import { useLimite } from '../limiteContexto';
 import Campo from '../components/Campo';
+import ModalLimite from '../components/ModalLimite';
 import SelectorTipo from '../components/SelectorTipo';
 import AyudaInfo from '../components/AyudaInfo';
 
@@ -31,6 +34,11 @@ function reducer(state, action) {
       return { ...state, errors: action.errors };
     case 'ADD_SUBTAREA':
       return { ...state, subtareas: [...state.subtareas, action.subtarea] };
+    case 'UPDATE_SUBTAREA':
+      return {
+        ...state,
+        subtareas: state.subtareas.map((s) => (s.id === action.id ? { ...s, ...action.cambios } : s)),
+      };
     case 'REMOVE_SUBTAREA':
       return { ...state, subtareas: state.subtareas.filter((s) => s.id !== action.id) };
     case 'RESET':
@@ -52,13 +60,14 @@ function validar(values, subtareas) {
   return errors;
 }
 
-// --- Formulario para agregar una gestión (campos uno debajo del otro) ---
+// --- Formulario para agregar o editar una gestión (campos uno debajo del otro) ---
 // revisarRef: el formulario padre la usa al guardar el evento, para incluir la gestión que
 // quedó escrita aunque no se haya presionado "Añadir".
-function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
-  const [nombre, setNombre] = useState('');
-  const [fecha, setFecha] = useState('');
-  const [horas, setHoras] = useState('');
+// inicial: si llega, el formulario edita esa gestión en vez de crear una nueva.
+function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef, inicial, idBase = 'gestion' }) {
+  const [nombre, setNombre] = useState(inicial?.nombre ?? '');
+  const [fecha, setFecha] = useState(inicial?.fecha_limite ?? '');
+  const [horas, setHoras] = useState(inicial ? String(inicial.horas_estimadas) : '');
   const [errores, setErrores] = useState({});
 
   const validarGestion = () => {
@@ -78,7 +87,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
   };
 
   const armar = () => ({
-    id: crypto.randomUUID(),
+    id: inicial?.id ?? crypto.randomUUID(),
     nombre: nombre.trim(),
     fecha_limite: fecha,
     horas_estimadas: parseFloat(horas),
@@ -119,10 +128,10 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
 
   return (
     <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4" onKeyDown={alPresionarTecla}>
-      <p className="text-sm font-medium text-gray-900">Nueva gestión</p>
+      <p className="text-sm font-medium text-gray-900">{inicial ? 'Editar gestión' : 'Nueva gestión'}</p>
 
       <Campo
-        id="gestion-nombre"
+        id={`${idBase}-nombre`}
         label="Nombre de la gestión"
         placeholder="Confirmar el catering"
         value={nombre}
@@ -132,7 +141,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
       />
 
       <Campo
-        id="gestion-fecha"
+        id={`${idBase}-fecha`}
         label="Fecha límite"
         type="date"
         min={todayStr}
@@ -144,7 +153,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
       />
 
       <Campo
-        id="gestion-horas"
+        id={`${idBase}-horas`}
         label="Horas estimadas"
         type="number"
         min="0.5"
@@ -164,7 +173,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
           className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark
                      focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand"
         >
-          Añadir
+          {inicial ? 'Guardar' : 'Añadir'}
         </button>
         <button
           type="button"
@@ -179,8 +188,130 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef }) {
   );
 }
 
+const btnAccion =
+  'inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium ' +
+  'text-gray-800 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+
+// --- Resolución de sobrecarga al crear el evento (Sprint 3 · C3 y C4) ---
+// Muestra cada día que se pasa del límite con sus cifras y, por cada gestión de ese día,
+// botones que lo arreglan con un clic: dejarla en las horas que caben, moverla al día sugerido o editarla.
+// Las cifras se recalculan en vivo con la lista actual, así el organizador ve cuándo ya cabe.
+function PanelConflictos({ conflictos, subtareas, fechaEvento, limite, onCambiar, onEditar, onCambiarLimite }) {
+  const dias = conflictos.map((c) => {
+    const delDia = subtareas.filter((s) => s.fecha_limite === c.fecha);
+    const nuevas = delDia.reduce((t, s) => t + Number(s.horas_estimadas), 0);
+    const existentes = Math.max(0, c.planificadas - c.horasGestion); // lo que ya tenía ese día en otros eventos
+    const total = existentes + nuevas;
+    const sugerido =
+      c.diaSugerido && c.diaSugerido !== c.fecha && (!fechaEvento || c.diaSugerido <= fechaEvento) ? c.diaSugerido : null;
+    return { ...c, delDia, nuevas, existentes, total, libres: Math.max(0, limite - existentes), sugerido, resuelto: total <= limite };
+  });
+  const pendientes = dias.filter((d) => !d.resuelto);
+
+  if (pendientes.length === 0) {
+    return (
+      <div role="status" className="flex gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+        <CheckCircle2 size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <p>
+          Listo, ya ningún día pasa de tu límite de {formatearHoras(limite)} h. Dale <strong>Guardar evento</strong>.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+      <p className="font-semibold">
+        {pendientes.length === 1 ? 'Un día queda' : `${pendientes.length} días quedan`} por encima de tu límite diario de{' '}
+        {formatearHoras(limite)} h
+      </p>
+      <p className="mt-0.5 text-red-800">Elige cómo resolverlo; el cambio se aplica a la lista de arriba.</p>
+
+      <ul className="mt-3 space-y-3">
+        {dias.map((d) =>
+          d.resuelto ? (
+            <li key={d.fecha} className="flex items-center gap-1.5 text-green-800">
+              <CheckCircle2 size={16} aria-hidden="true" /> El {formatearFecha(d.fecha)} ya cabe ({formatearHoras(d.total)} h de{' '}
+              {formatearHoras(limite)} h).
+            </li>
+          ) : (
+            <li key={d.fecha} className="rounded-lg border border-red-100 bg-white p-3 text-gray-800">
+              <p>
+                <strong>El {formatearFecha(d.fecha)}</strong> quedarías con{' '}
+                <strong>
+                  {formatearHoras(d.total)} h de {formatearHoras(limite)} h
+                </strong>
+                {d.existentes > 0
+                  ? ` (${formatearHoras(d.existentes)} h que ya tienes de otros eventos + ${formatearHoras(d.nuevas)} h de este).`
+                  : '.'}{' '}
+                <span className="font-semibold text-red-800">Te pasas por {formatearHoras(d.total - limite)} h.</span>
+              </p>
+              <ul className="mt-2 divide-y divide-gray-100">
+                {d.delDia.map((g) => {
+                  const cabe = maximoQueCabe(d.libres - (d.nuevas - Number(g.horas_estimadas)));
+                  return (
+                    <li key={g.id} className="py-2">
+                      <p className="font-medium text-gray-900">
+                        {g.nombre} <span className="font-normal text-gray-500">· {formatearHoras(g.horas_estimadas)} h</span>
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-2">
+                        {cabe >= 0.5 && cabe < Number(g.horas_estimadas) && (
+                          <button
+                            type="button"
+                            className={btnAccion}
+                            onClick={() => onCambiar(g.id, { horas_estimadas: cabe })}
+                          >
+                            <Clock size={14} aria-hidden="true" /> Dejar en {formatearHoras(cabe)} h
+                          </button>
+                        )}
+                        {d.sugerido && (
+                          <button
+                            type="button"
+                            className={btnAccion}
+                            onClick={() => onCambiar(g.id, { fecha_limite: d.sugerido })}
+                          >
+                            <CalendarClock size={14} aria-hidden="true" /> Mover al {formatearFecha(d.sugerido)}
+                          </button>
+                        )}
+                        <button type="button" className={btnAccion} onClick={() => onEditar(g.id)}>
+                          <Pencil size={14} aria-hidden="true" /> Editar
+                        </button>
+                      </div>
+                      {cabe < 0.5 && !d.sugerido && (
+                        <p className="mt-1.5 text-xs text-gray-600">
+                          Ese día ya está lleno y ningún otro día antes del evento tiene {formatearHoras(g.horas_estimadas)} h
+                          libres. Edítala (por ejemplo, divídela en dos con menos horas) o cambia tu límite diario.
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          )
+        )}
+      </ul>
+
+      <p className="mt-3 text-red-800">
+        ¿Puedes dedicarle más horas al día?{' '}
+        <button
+          type="button"
+          onClick={onCambiarLimite}
+          className="font-semibold underline hover:text-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+        >
+          Cambiar mi límite diario
+        </button>
+      </p>
+    </div>
+  );
+}
+
 function Crear() {
   const navigate = useNavigate();
+  const { limite: limiteActual } = useLimite();
+  const [conflictos, setConflictos] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+  const [cambiandoLimite, setCambiandoLimite] = useState(false);
   const [state, dispatch] = useReducer(reducer, initialState);
   const [enviando, setEnviando] = useState(false);
   const [creado, setCreado] = useState(false);
@@ -198,6 +329,10 @@ function Crear() {
   const enviar = async (e) => {
     e.preventDefault();
     setErrorGeneral('');
+    if (editandoId) {
+      setErrorGeneral('Termina de editar la gestión (dale "Guardar" o "Cancelar") antes de guardar el evento.');
+      return;
+    }
     // La gestión escrita pero sin "Añadir" también se guarda.
     let pendientes = state.subtareas;
     if (mostrarFormGestion && revisarBorrador.current) {
@@ -206,7 +341,12 @@ function Crear() {
         setErrorGeneral('Completa la gestión que estabas agregando, o dale "Cancelar" si no la necesitas.');
         return;
       }
-      if (borrador.estado === 'lista') pendientes = [...pendientes, borrador.gestion];
+      if (borrador.estado === 'lista') {
+        pendientes = [...pendientes, borrador.gestion];
+        // Queda en la lista: si hay conflicto, el organizador la ve y puede arreglarla desde el aviso.
+        dispatch({ type: 'ADD_SUBTAREA', subtarea: borrador.gestion });
+        setMostrarFormGestion(false);
+      }
     }
     const errors = validar(state.values, pendientes);
     if (Object.keys(errors).length) {
@@ -214,6 +354,7 @@ function Crear() {
       return;
     }
     setEnviando(true);
+    setConflictos(null);
     try {
       // El id temporal solo sirve en pantalla; no se envía al backend.
       // eslint-disable-next-line no-unused-vars
@@ -227,11 +368,8 @@ function Crear() {
       }
       const sobrecarga = leerSobrecarga(err);
       if (sobrecarga) {
-        // Una línea por cada día que se pasa del límite, con sus cifras (Sprint 3 · C3).
-        setErrorGeneral(
-          ['Algunas gestiones dejan días por encima de tu límite diario:', ...sobrecarga.map(describirSobrecarga),
-            'Cambia sus fechas o reduce sus horas antes de guardar.'].join('\n')
-        );
+        // Cada día que se pasa del límite, con sus cifras (C3) y botones para resolverlo (C4).
+        setConflictos(sobrecarga);
         return;
       }
       setErrorGeneral('No se pudo guardar el evento. Revisa tu conexión e inténtalo otra vez.');
@@ -326,14 +464,38 @@ function Crear() {
             <p className="mt-4 text-sm text-gray-500">Aún no has agregado ninguna gestión.</p>
           ) : (
             <ul className="mt-4 divide-y divide-gray-100 border-y border-gray-100">
-              {state.subtareas.map((s) => (
+              {state.subtareas.map((s) =>
+                editandoId === s.id ? (
+                  <li key={s.id} className="pb-3">
+                    <NuevaGestion
+                      inicial={s}
+                      idBase={`editar-${s.id}`}
+                      fechaTope={state.values.fecha}
+                      onAgregar={(g) => {
+                        dispatch({ type: 'UPDATE_SUBTAREA', id: s.id, cambios: g });
+                        setEditandoId(null);
+                      }}
+                      onCancelar={() => setEditandoId(null)}
+                    />
+                  </li>
+                ) : (
                 <li key={s.id} className="flex items-start justify-between gap-3 py-3">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{s.nombre}</p>
                     <p className="text-xs text-gray-500">
-                      Vence el {formatoFecha(s.fecha_limite)} · {s.horas_estimadas} h
+                      Vence el {formatoFecha(s.fecha_limite)} · <span className="whitespace-nowrap">{formatearHoras(s.horas_estimadas)} h</span>
                     </p>
                   </div>
+                  <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditandoId(s.id)}
+                    aria-label={`Editar la gestión ${s.nombre}`}
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500
+                               hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                  >
+                    <Pencil size={14} aria-hidden="true" /> Editar
+                  </button>
                   <button
                     type="button"
                     onClick={() => dispatch({ type: 'REMOVE_SUBTAREA', id: s.id })}
@@ -343,8 +505,10 @@ function Crear() {
                   >
                     <X size={14} aria-hidden="true" /> Quitar
                   </button>
+                  </div>
                 </li>
-              ))}
+                )
+              )}
             </ul>
           )}
 
@@ -369,6 +533,21 @@ function Crear() {
             </button>
           )}
         </div>
+
+        {conflictos && (
+          <PanelConflictos
+            conflictos={conflictos}
+            subtareas={state.subtareas}
+            fechaEvento={state.values.fecha}
+            limite={limiteActual ?? conflictos[0].limite}
+            onCambiar={(id, cambios) => dispatch({ type: 'UPDATE_SUBTAREA', id, cambios })}
+            onEditar={(id) => {
+              setEditandoId(id);
+              setMostrarFormGestion(false);
+            }}
+            onCambiarLimite={() => setCambiandoLimite(true)}
+          />
+        )}
 
         {errorGeneral && (
           <div role="alert" className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -398,6 +577,11 @@ function Crear() {
 
         <p className="text-xs text-gray-500">Los campos con * son obligatorios.</p>
       </form>
+      <ModalLimite
+        abierto={cambiandoLimite}
+        onCerrar={() => setCambiandoLimite(false)}
+        onGuardado={() => setCambiandoLimite(false)}
+      />
     </section>
   );
 }

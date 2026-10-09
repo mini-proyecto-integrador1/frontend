@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CalendarClock, CalendarDays, ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarClock, CalendarDays, ChevronLeft, Clock, Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 import {
   actualizarEvento,
   actualizarGestion,
@@ -17,7 +17,8 @@ import SelectorTipo from '../components/SelectorTipo';
 import Confirmar from '../components/Confirmar';
 import AyudaInfo from '../components/AyudaInfo';
 import ModalReprogramar from '../components/ModalReprogramar';
-import { describirSobrecarga, leerSobrecarga } from '../sobrecargaUtils';
+import ModalLimite from '../components/ModalLimite';
+import { describirSobrecarga, leerSobrecarga, maximoQueCabe } from '../sobrecargaUtils';
 
 const btnPrimario =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50 ' +
@@ -25,6 +26,9 @@ const btnPrimario =
 const btnNeutral =
   'inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium ' +
   'text-gray-700 hover:bg-gray-100 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+const btnAccion =
+  'inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium ' +
+  'text-gray-800 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
 const btnPeligro =
   'inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium ' +
   'text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
@@ -129,6 +133,41 @@ function FormEvento({ evento, onGuardado, onCancelar }) {
   );
 }
 
+// ---------- Conflicto de sobrecarga con opciones que lo resuelven (Sprint 3 · C3 y C4) ----------
+// Muestra las cifras del día y botones que aplican la solución con un clic, en vez de solo decir qué hacer.
+// opciones: [{ icono, texto, accion }] (las que sean false se omiten). Siempre ofrece cambiar el límite diario;
+// al guardarlo se llama onLimiteGuardado para reintentar con el nuevo límite.
+function ResolverConflicto({ conflicto, opciones, ocupado, onLimiteGuardado }) {
+  const [cambiandoLimite, setCambiandoLimite] = useState(false);
+  return (
+    <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+      <p>{describirSobrecarga(conflicto)}</p>
+      <p className="mt-0.5 font-semibold">Te pasas por {formatearHoras(conflicto.exceso)} h. ¿Cómo lo resuelves?</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {opciones.filter(Boolean).map(({ icono: Icono, texto, accion }) => (
+          <button key={texto} type="button" onClick={accion} disabled={ocupado} className={btnAccion}>
+            <Icono size={14} aria-hidden="true" /> {texto}
+          </button>
+        ))}
+        <button type="button" onClick={() => setCambiandoLimite(true)} disabled={ocupado} className={btnAccion}>
+          <Settings2 size={14} aria-hidden="true" /> Cambiar mi límite diario
+        </button>
+      </div>
+      {/* El modal se dibuja en <body>, pero en React su "submit" subiría hasta el formulario de la gestión: se corta aquí. */}
+      <div onSubmit={(e) => e.stopPropagation()}>
+        <ModalLimite
+          abierto={cambiandoLimite}
+          onCerrar={() => setCambiandoLimite(false)}
+          onGuardado={() => {
+            setCambiandoLimite(false);
+            onLimiteGuardado();
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ---------- Una gestión: estado, edición y eliminación ----------
 function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
   const [editando, setEditando] = useState(false);
@@ -136,6 +175,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
   const [errores, setErrores] = useState({});
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
+  const [conflicto, setConflicto] = useState(null); // 409 al subir las horas en "Editar"
 
   async function cambiarEstado(estado) {
     if (estado === gestion.estado || ocupado) return;
@@ -160,6 +200,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
     });
     setErrores({});
     setError('');
+    setConflicto(null);
     setEditando(true);
   }
 
@@ -168,15 +209,17 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
     setErrores((p) => ({ ...p, [e.target.name]: undefined }));
   };
 
-  async function guardar(e) {
-    e.preventDefault();
+  async function guardar(e, horasForzadas) {
+    e?.preventDefault();
     const errs = {};
-    const h = parseFloat(v.horas_estimadas);
+    const h = horasForzadas ?? parseFloat(String(v.horas_estimadas).replace(',', '.'));
     if (!v.nombre.trim()) errs.nombre = 'Escribe el nombre de la gestión.';
     if (isNaN(h) || h <= 0 || h > 16) errs.horas_estimadas = 'Escribe un valor entre 0,5 y 16 horas.';
     if (Object.keys(errs).length) return setErrores(errs);
 
     setOcupado(true);
+    setError('');
+    setConflicto(null);
     try {
       const actualizada = await actualizarGestion(gestion.id, {
         nombre: v.nombre.trim(),
@@ -186,11 +229,8 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
       setEditando(false);
     } catch (err) {
       const sobrecarga = leerSobrecarga(err);
-      setError(
-        sobrecarga
-          ? `${describirSobrecarga(sobrecarga[0])} Baja las horas o usa "Reprogramar" para moverla a otro día.`
-          : mensajeDe(err, 'No se pudieron guardar los cambios. Inténtalo otra vez.')
-      );
+      if (sobrecarga) setConflicto(sobrecarga[0]);
+      else setError(mensajeDe(err, 'No se pudieron guardar los cambios. Inténtalo otra vez.'));
     } finally {
       setOcupado(false);
     }
@@ -206,6 +246,32 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
             <p role="alert" className="text-sm text-red-800">
               {error}
             </p>
+          )}
+          {conflicto && (
+            <ResolverConflicto
+              conflicto={conflicto}
+              ocupado={ocupado}
+              opciones={[
+                maximoQueCabe(conflicto.disponibles) >= 0.5 && {
+                  icono: Clock,
+                  texto: `Dejarla en ${formatearHoras(maximoQueCabe(conflicto.disponibles))} h y guardar`,
+                  accion: () => {
+                    const cabe = maximoQueCabe(conflicto.disponibles);
+                    setV((p) => ({ ...p, horas_estimadas: String(cabe) }));
+                    guardar(null, cabe);
+                  },
+                },
+                {
+                  icono: CalendarClock,
+                  texto: 'Reprogramarla a otro día',
+                  accion: () => {
+                    setEditando(false);
+                    onReprogramar(gestion);
+                  },
+                },
+              ]}
+              onLimiteGuardado={() => guardar(null)}
+            />
           )}
           <Campo id={`g-nombre-${gestion.id}`} name="nombre" label="Nombre de la gestión" value={v.nombre} onChange={cambiar} error={errores.nombre} />
           {/* La fecha se cambia con "Reprogramar" (con aviso de tope y de sobrecarga); aquí solo nombre y horas. */}
@@ -316,40 +382,42 @@ function FormNuevaGestion({ evento, onCreada, onCancelar }) {
   const [v, setV] = useState({ nombre: '', fecha_limite: '', horas_estimadas: '' });
   const [errores, setErrores] = useState({});
   const [error, setError] = useState('');
+  const [conflicto, setConflicto] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
   const cambiar = (e) => {
     setV((p) => ({ ...p, [e.target.name]: e.target.value }));
     setErrores((p) => ({ ...p, [e.target.name]: undefined }));
     setError('');
+    setConflicto(null);
   };
 
-  async function guardar(e) {
-    e.preventDefault();
+  // cambios: lo que aplica un botón de resolución (otra fecha u otras horas) antes de reintentar.
+  async function guardar(e, cambios = {}) {
+    e?.preventDefault();
+    const val = { ...v, ...cambios };
+    if (Object.keys(cambios).length) setV(val);
     const errs = {};
-    const h = parseFloat(String(v.horas_estimadas).replace(',', '.'));
-    if (!v.nombre.trim()) errs.nombre = 'Escribe el nombre de la gestión.';
-    if (!v.fecha_limite) errs.fecha_limite = 'Selecciona la fecha límite.';
-    else if (v.fecha_limite < hoy) errs.fecha_limite = 'La fecha límite no puede ser en el pasado.';
-    else if (v.fecha_limite > evento.fecha)
+    const h = parseFloat(String(val.horas_estimadas).replace(',', '.'));
+    if (!val.nombre.trim()) errs.nombre = 'Escribe el nombre de la gestión.';
+    if (!val.fecha_limite) errs.fecha_limite = 'Selecciona la fecha límite.';
+    else if (val.fecha_limite < hoy) errs.fecha_limite = 'La fecha límite no puede ser en el pasado.';
+    else if (val.fecha_limite > evento.fecha)
       errs.fecha_limite = `Debe ser antes o el mismo día del evento (${formatearFecha(evento.fecha)}).`;
     if (isNaN(h) || h <= 0 || h > 16) errs.horas_estimadas = 'Escribe un valor entre 0,5 y 16 horas.';
     if (Object.keys(errs).length) return setErrores(errs);
 
     setGuardando(true);
+    setError('');
+    setConflicto(null);
     try {
-      const datos = { nombre: v.nombre.trim(), fecha_limite: v.fecha_limite, horas_estimadas: h };
+      const datos = { nombre: val.nombre.trim(), fecha_limite: val.fecha_limite, horas_estimadas: h };
       const creada = await crearGestion(evento.id, datos);
       onCreada({ estado: 'pendiente', nota: null, ...datos, ...creada });
     } catch (err) {
       const sobrecarga = leerSobrecarga(err);
       if (sobrecarga) {
-        const c = sobrecarga[0];
-        setError(
-          `${describirSobrecarga(c)} ` +
-            (c.diaSugerido ? `El ${formatearFecha(c.diaSugerido)} sí cabe. ` : '') +
-            (c.disponibles >= 0.5 ? `También puedes dejarla en ${formatearHoras(c.disponibles)} h.` : '')
-        );
+        setConflicto(sobrecarga[0]);
       } else if (err?.status === 404) {
         setError('No encontramos este evento. Puede que se haya eliminado.');
       } else {
@@ -367,6 +435,27 @@ function FormNuevaGestion({ evento, onCreada, onCancelar }) {
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
+      )}
+      {conflicto && (
+        <ResolverConflicto
+          conflicto={conflicto}
+          ocupado={guardando}
+          opciones={[
+            conflicto.diaSugerido &&
+              conflicto.diaSugerido !== conflicto.fecha &&
+              conflicto.diaSugerido <= evento.fecha && {
+                icono: CalendarClock,
+                texto: `Ponerla el ${formatearFecha(conflicto.diaSugerido)} y agregar`,
+                accion: () => guardar(null, { fecha_limite: conflicto.diaSugerido }),
+              },
+            maximoQueCabe(conflicto.disponibles) >= 0.5 && {
+              icono: Clock,
+              texto: `Dejarla en ${formatearHoras(maximoQueCabe(conflicto.disponibles))} h y agregar`,
+              accion: () => guardar(null, { horas_estimadas: String(maximoQueCabe(conflicto.disponibles)) }),
+            },
+          ]}
+          onLimiteGuardado={() => guardar(null)}
+        />
       )}
       <Campo
         id="nueva-nombre"
