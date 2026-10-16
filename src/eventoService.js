@@ -2,11 +2,20 @@ import { API_URL, authHeaders, clearToken } from './auth';
 
 // Hace la petición con el token y convierte las respuestas de error en errores con .status y .body.
 async function pedir(ruta, { method = 'GET', body } = {}) {
-  const response = await fetch(`${API_URL}${ruta}`, {
-    method,
-    headers: authHeaders(body ? { 'Content-Type': 'application/json' } : {}),
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}${ruta}`, {
+      method,
+      headers: authHeaders(body ? { 'Content-Type': 'application/json' } : {}),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // Sin internet o servidor caído: no hay respuesta HTTP.
+    const error = new Error('Sin conexión');
+    error.status = 0;
+    error.red = true;
+    throw error;
+  }
 
   if (response.status === 401 || response.status === 403) {
     // Sesión ausente o vencida: se limpia el token y la vista redirige al login.
@@ -17,9 +26,10 @@ async function pedir(ruta, { method = 'GET', body } = {}) {
   }
 
   if (!response.ok) {
-    const error = new Error('La petición falló');
+    const cuerpo = await response.json().catch(() => null);
+    const error = new Error(cuerpo?.message || 'La petición falló');
     error.status = response.status;
-    error.body = await response.json().catch(() => null);
+    error.body = cuerpo;
     throw error;
   }
 
@@ -56,3 +66,12 @@ export const crearGestion = (eventoId, datos) =>
 export const getLimite = () => pedir('/api/perfil/limite/');
 export const guardarLimite = (horas) =>
   pedir('/api/perfil/limite/', { method: 'PUT', body: { limite_horas_diarias: horas } });
+
+// --- Registrar avance (Sprint 4 · US-09) ---
+// PATCH /api/subtareas/<id>/  body { estado: 'hecho' | 'pospuesto' | 'pendiente', nota?: 'texto' }
+// La nota es opcional; si no se envía (o llega vacía), el backend conserva la que ya había.
+export const cambiarEstadoGestion = (id, estado, nota) =>
+  pedir(`/api/subtareas/${id}/`, {
+    method: 'PATCH',
+    body: nota ? { estado, nota } : { estado },
+  });

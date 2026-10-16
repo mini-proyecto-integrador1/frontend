@@ -19,6 +19,7 @@ import AyudaInfo from '../components/AyudaInfo';
 import ModalReprogramar from '../components/ModalReprogramar';
 import ModalLimite from '../components/ModalLimite';
 import { describirSobrecarga, leerSobrecarga, maximoQueCabe } from '../sobrecargaUtils';
+import { mensajeDe } from '../erroresUtils';
 
 const btnPrimario =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50 ' +
@@ -45,15 +46,6 @@ const ESTILO_ACTIVO = {
   pospuesto: 'bg-amber-400 text-gray-900',
 };
 
-// Primer mensaje de error que devuelve DRF, o un texto claro por defecto.
-function mensajeDe(err, porDefecto) {
-  const body = err?.body;
-  if (body && typeof body === 'object') {
-    const primero = Object.values(body).flat()[0];
-    if (typeof primero === 'string') return primero;
-  }
-  return porDefecto;
-}
 
 // ---------- Edición de los datos del evento ----------
 function FormEvento({ evento, onGuardado, onCancelar }) {
