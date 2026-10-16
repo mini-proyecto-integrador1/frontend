@@ -162,7 +162,7 @@ function ResolverConflicto({ conflicto, opciones, ocupado, onLimiteGuardado }) {
 }
 
 // ---------- Una gestión: estado, edición y eliminación ----------
-function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
+function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) {
   const [editando, setEditando] = useState(false);
   const [v, setV] = useState({ nombre: '', fecha_limite: '', horas_estimadas: '' });
   const [errores, setErrores] = useState({});
@@ -172,12 +172,14 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
   const [posponiendo, setPosponiendo] = useState(false);
   const [nota, setNota] = useState('');
   const [reintento, setReintento] = useState(null);
+  const [conflictoEstado, setConflictoEstado] = useState(null);
 
     async function cambiarEstado(estado, notaTexto) {
     if (ocupado) return;
     const anterior = gestion;
     setError('');
     setReintento(null);
+    setConflictoEstado(null);
     setOcupado(true);
     // Se ve al instante; si falla, se revierte
     onCambio({ ...gestion, estado, ...(notaTexto ? { nota: notaTexto } : {}) });
@@ -185,15 +187,21 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
       const actualizada = await cambiarEstadoGestion(gestion.id, estado, notaTexto);
       onCambio({ ...anterior, ...actualizada });
       setPosponiendo(false);
+       onAviso(
+        estado === 'hecho'
+          ? `Listo, marcaste "${gestion.nombre}" como hecha.`
+          : estado === 'pospuesto'
+            ? notaTexto
+              ? 'Gestión pospuesta. Tu nota quedó guardada.'
+              : 'Gestión pospuesta.'
+            : `"${gestion.nombre}" volvió a pendiente.`
+      );
     } catch (err) {
       onCambio(anterior);
-      const sobrecarga = leerSobrecarga(err); // el 409 no trae "message"
-      setError(
-        sobrecarga
-          ? `${describirSobrecarga(sobrecarga[0])} Reprograma otra gestión o cambia tu límite.`
-          : mensajeDe(err, 'No se pudo guardar el cambio. Inténtalo de nuevo.')
-      );
       setReintento({ estado, nota: notaTexto });
+      const sobrecarga = leerSobrecarga(err); // el 409 no trae "message"
+      if (sobrecarga) setConflictoEstado(sobrecarga[0]);
+      else setError(mensajeDe(err, 'No se pudo guardar el cambio. Inténtalo de nuevo.'));
     } finally {
       setOcupado(false);
     }
@@ -260,6 +268,44 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
     return (
       <li className="py-4">
         <form onSubmit={guardar} noValidate className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        {conflictoEstado && (
+        <div className="mt-3">
+          <ResolverConflicto
+            conflicto={conflictoEstado}
+            ocupado={ocupado}
+            opciones={[
+              {
+                icono: CalendarClock,
+                texto: 'Mover a otro día',
+                accion: () => {
+                  setConflictoEstado(null);
+                  onReprogramar(gestion);
+                },
+              },
+              {
+                icono: Pencil,
+                texto: 'Reducir horas',
+                accion: () => {
+                  setConflictoEstado(null);
+                  abrirEdicion();
+                },
+              },
+              gestion.estado !== 'pospuesto' && {
+                icono: Clock,
+                texto: 'Posponerla',
+                accion: () => {
+                  setConflictoEstado(null);
+                  elegirEstado('pospuesto');
+                },
+              },
+            ]}
+            onLimiteGuardado={() => {
+              setConflictoEstado(null);
+              if (reintento) cambiarEstado(reintento.estado, reintento.nota);
+            }}
+          />
+        </div>
+      )}
           {error && (
             <p role="alert" className="text-sm text-red-800">
               {error}
@@ -783,6 +829,7 @@ function EventoDetalle() {
                         setErrorEliminar('');
                         setPorEliminar({ tipo: 'gestion', gestion });
                       }}
+                      onAviso={mostrarAviso}
                     />
                   ))}
                 </ul>
