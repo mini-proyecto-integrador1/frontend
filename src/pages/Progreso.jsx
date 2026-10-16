@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarDays, CheckCircle2, Clock } from 'lucide-react';
-import { getEventos } from '../eventoService';
+import { getEventos, getProgreso } from '../eventoService';
 import { describirPlazo, formatearFecha,  } from '../hoyUtils';
 import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS, textoProgreso } from '../progresoUtils';
 import BarraProgreso from '../components/BarraProgreso';
@@ -96,13 +96,15 @@ function Progreso() {
   const [estado, setEstado] = useState('cargando'); // 'cargando' | 'listo' | 'error'
   const [eventos, setEventos] = useState([]);
   const [intento, setIntento] = useState(0);
+  const [general, setGeneral] = useState(null);
 
   useEffect(() => {
     let activo = true;
-    getEventos()
-      .then((data) => {
+    Promise.all([getEventos(), getProgreso()])
+      .then(([data, prog]) => {
         if (!activo) return;
         setEventos(Array.isArray(data) ? data : []);
+        setGeneral(prog?.general || null);
         setEstado('listo');
       })
       .catch((err) => {
@@ -129,16 +131,7 @@ function Progreso() {
     });
   }, [eventos]);
 
-  const resumen = useMemo(() => {
-    let hechas = 0;
-    let total = 0;
-    for (const ev of eventos) {
-      const p = calcularProgreso(ev);
-      hechas += p.conteo.hecho;
-      total += p.total;
-    }
-    return { hechas, total };
-  }, [eventos]);
+  
 
   function reintentar() {
     setEstado('cargando');
@@ -162,10 +155,9 @@ function Progreso() {
             </h1>
             <p className="mt-1 text-sm text-gray-500">Cómo vas con la logística de cada evento.</p>
           </div>
-          {estado === 'listo' && resumen.total > 0 && (
+                 {estado === 'listo' && general && general.total > 0 && (
             <p className="text-sm text-gray-600">
-              <strong className="font-semibold text-gray-900">{resumen.hechas}</strong> de {resumen.total} gestiones
-              hechas en total
+              Total: <strong className="font-semibold text-gray-900">{textoProgreso(general)}</strong>
             </p>
           )}
         </header>

@@ -75,3 +75,7 @@ export const cambiarEstadoGestion = (id, estado, nota) =>
     method: 'PATCH',
     body: nota ? { estado, nota } : { estado },
   });
+
+// --- Progreso general (Sprint 4 · US-10) ---
+// GET /api/progreso/ -> { general: { total, hechas, porcentaje }, eventos: [{ id, nombre, fecha, progreso }] }
+export const getProgreso = () => pedir('/api/progreso/');
