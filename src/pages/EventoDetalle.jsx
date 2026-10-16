@@ -11,7 +11,7 @@ import {
   getEvento,
 } from '../eventoService';
 import { compararGestiones, describirPlazo, fechaLocalHoy, formatearFecha, formatearHoras } from '../hoyUtils';
-import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS } from '../progresoUtils';
+import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS, textoProgreso} from '../progresoUtils';
 import BarraProgreso from '../components/BarraProgreso';
 import Campo from '../components/Campo';
 import SelectorTipo from '../components/SelectorTipo';
@@ -728,16 +728,9 @@ function EventoDetalle() {
                     </div>
                   </div>
 
-                  {progreso.total > 0 && (
+                                    {progreso.total > 0 && (
                     <div className="mt-6">
-                      <div className="flex items-end justify-between">
-                        <p className="text-2xl font-bold text-gray-900">
-                          {progreso.porcentaje}%<span className="ml-1.5 text-sm font-medium text-gray-500">hecho</span>
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {formatearHoras(progreso.horasHechas)} de {formatearHoras(progreso.horasTotales)} h
-                        </p>
-                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{textoProgreso(progreso)}</p>
                       <div className="mt-2">
                         <BarraProgreso progreso={progreso} etiqueta={`Avance de ${evento.nombre}`} />
                       </div>
@@ -771,7 +764,13 @@ function EventoDetalle() {
                 />
               </h2>
               {gestiones.length === 0 ? (
-                <p className="mt-4 text-sm text-gray-500">Este evento no tiene gestiones logísticas.</p>
+                                               <div className="mt-4 rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                  <p className="font-medium text-gray-900">Sin tareas asignadas</p>
+                  <p className="mt-1 text-sm text-gray-600">Agrega la primera para empezar a ver el avance.</p>
+                  <button type="button" onClick={() => setAgregando(true)} className={`mt-3 ${btnPrimario}`}>
+                    Agregar subtarea
+                  </button>
+                </div>
               ) : (
                 <ul className="mt-2 divide-y divide-gray-100">
                   {gestiones.map((g) => (

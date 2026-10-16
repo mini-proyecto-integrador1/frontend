@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CalendarDays, CheckCircle2, Clock } from 'lucide-react';
 import { getEventos } from '../eventoService';
-import { describirPlazo, formatearFecha, formatearHoras } from '../hoyUtils';
-import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS } from '../progresoUtils';
+import { describirPlazo, formatearFecha,  } from '../hoyUtils';
+import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS, textoProgreso } from '../progresoUtils';
 import BarraProgreso from '../components/BarraProgreso';
 import AyudaInfo from '../components/AyudaInfo';
+import { Link, useNavigate } from 'react-router-dom';
 
 const botonPrimario =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark ' +
@@ -36,17 +36,19 @@ function TarjetaEvento({ evento }) {
       </header>
 
       {p.total === 0 ? (
-        <p className="mt-4 text-sm text-gray-500">Este evento todavía no tiene gestiones logísticas.</p>
+               <div className="mt-4 text-sm">
+          <p className="font-medium text-gray-900">Sin tareas asignadas</p>
+          <Link
+            to={`/evento/${evento.id}`}
+            state={{ agregarGestion: true }}
+            className="mt-1 inline-block font-semibold text-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          >
+            Agregar subtarea
+          </Link>
+        </div> 
       ) : (
         <>
-          <div className="mt-5 flex items-end justify-between gap-3">
-            <p className="text-3xl font-bold text-gray-900">
-              {p.porcentaje}%<span className="ml-1.5 text-sm font-medium text-gray-500">hecho</span>
-            </p>
-            <p className="text-sm text-gray-500">
-              {formatearHoras(p.horasHechas)} de {formatearHoras(p.horasTotales)} h
-            </p>
-          </div>
+                    <p className="mt-5 text-3xl font-bold text-gray-900">{textoProgreso(p)}</p>
 
           <div className="mt-2">
             <BarraProgreso progreso={p} etiqueta={`Avance de ${evento.nombre}`} />
@@ -154,9 +156,7 @@ function Progreso() {
                 nombre="Cómo se calcula el avance"
                 titulo="Cómo se calcula el avance"
                 lineas={[
-                  'El porcentaje se mide por horas: terminar una gestión de 4 h avanza más que una de 1 h.',
-                  'Verde son las hechas, ámbar las pospuestas y gris las pendientes.',
-                  'Los eventos más cercanos salen primero.',
+                  'El porcentaje es las gestiones hechas sobre el total de gestiones del evento.',
                 ]}
               />
             </h1>

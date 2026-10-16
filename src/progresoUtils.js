@@ -1,39 +1,38 @@
 import { compararGestiones, diasEntre, fechaLocalHoy } from './hoyUtils';
 
-// Calcula el avance de un evento a partir de sus gestiones.
-// El porcentaje se mide por HORAS hechas sobre horas totales: terminar una gestión de 8 h
-// pesa más que una de 30 min, que es como lo vive el organizador.
+// Calcula el avance de un evento a partir de sus gestiones (subtareas).
+// Regla del backend: porcentaje = hechas / total, con un decimal; con 0 subtareas es 0.
 export function calcularProgreso(evento, hoy = fechaLocalHoy()) {
   const gestiones = evento.subtareas || [];
-  const horas = (g) => Number(g.horas_estimadas) || 0;
-
   const conteo = { hecho: 0, pospuesto: 0, pendiente: 0 };
-  const horasPorEstado = { hecho: 0, pospuesto: 0, pendiente: 0 };
-  let horasTotales = 0;
-  let horasHechas = 0;
+  for (const g of gestiones) conteo[g.estado] = (conteo[g.estado] || 0) + 1;
 
-  for (const g of gestiones) {
-    conteo[g.estado] = (conteo[g.estado] || 0) + 1;
-    horasPorEstado[g.estado] = (horasPorEstado[g.estado] || 0) + horas(g);
-    horasTotales += horas(g);
-    if (g.estado === 'hecho') horasHechas += horas(g);
-  }
+  const total = gestiones.length;
+  const porcentaje = total > 0 ? Math.round((conteo.hecho / total) * 1000) / 10 : 0;
 
   const abiertas = gestiones.filter((g) => g.estado !== 'hecho').sort(compararGestiones);
   const vencidas = abiertas.filter((g) => g.fecha_limite < hoy).length;
   const siguiente = abiertas.find((g) => g.fecha_limite >= hoy) || null;
 
   return {
-    total: gestiones.length,
+    total,
+    hechas: conteo.hecho,
     conteo,
-    horasPorEstado,
-    horasTotales,
-    horasHechas,
-    porcentaje: horasTotales > 0 ? Math.round((horasHechas / horasTotales) * 100) : 0,
+    porcentaje,
     vencidas,
     siguiente,
     diasParaEvento: diasEntre(hoy, evento.fecha),
   };
+}
+
+// 50 -> "50 %"   14.3 -> "14,3 %"
+export function formatearPorcentaje(p) {
+  return `${Number.isInteger(p) ? p : p.toFixed(1).replace('.', ',')} %`;
+}
+
+// "2 de 4 · 50 %"
+export function textoProgreso(p) {
+  return `${p.hechas} de ${p.total} · ${formatearPorcentaje(p.porcentaje)}`;
 }
 
 // "Faltan 12 días", "Es hoy", "Fue hace 3 días"
