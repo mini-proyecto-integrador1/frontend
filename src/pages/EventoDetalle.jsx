@@ -4,13 +4,14 @@ import { CalendarClock, CalendarDays, ChevronLeft, Clock, Pencil, Plus, Settings
 import {
   actualizarEvento,
   actualizarGestion,
+  cambiarEstadoGestion,
   crearGestion,
   eliminarEvento,
   eliminarGestion,
   getEvento,
 } from '../eventoService';
 import { compararGestiones, describirPlazo, fechaLocalHoy, formatearFecha, formatearHoras } from '../hoyUtils';
-import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS } from '../progresoUtils';
+import { calcularProgreso, describirCuentaRegresiva, SEGMENTOS, textoProgreso} from '../progresoUtils';
 import BarraProgreso from '../components/BarraProgreso';
 import Campo from '../components/Campo';
 import SelectorTipo from '../components/SelectorTipo';
@@ -19,6 +20,7 @@ import AyudaInfo from '../components/AyudaInfo';
 import ModalReprogramar from '../components/ModalReprogramar';
 import ModalLimite from '../components/ModalLimite';
 import { describirSobrecarga, leerSobrecarga, maximoQueCabe } from '../sobrecargaUtils';
+import { mensajeDe } from '../erroresUtils';
 
 const btnPrimario =
   'rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50 ' +
@@ -41,19 +43,10 @@ const ESTADOS = [
 
 const ESTILO_ACTIVO = {
   pendiente: 'bg-white text-gray-900 shadow-sm',
-  hecho: 'bg-green-600 text-white',
+  hecho: 'bg-green-700 text-white',
   pospuesto: 'bg-amber-400 text-gray-900',
 };
 
-// Primer mensaje de error que devuelve DRF, o un texto claro por defecto.
-function mensajeDe(err, porDefecto) {
-  const body = err?.body;
-  if (body && typeof body === 'object') {
-    const primero = Object.values(body).flat()[0];
-    if (typeof primero === 'string') return primero;
-  }
-  return porDefecto;
-}
 
 // ---------- Edición de los datos del evento ----------
 function FormEvento({ evento, onGuardado, onCancelar }) {
@@ -169,28 +162,61 @@ function ResolverConflicto({ conflicto, opciones, ocupado, onLimiteGuardado }) {
 }
 
 // ---------- Una gestión: estado, edición y eliminación ----------
-function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
+function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) {
   const [editando, setEditando] = useState(false);
   const [v, setV] = useState({ nombre: '', fecha_limite: '', horas_estimadas: '' });
   const [errores, setErrores] = useState({});
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [conflicto, setConflicto] = useState(null); // 409 al subir las horas en "Editar"
+  const [posponiendo, setPosponiendo] = useState(false);
+  const [nota, setNota] = useState('');
+  const [reintento, setReintento] = useState(null);
+  const [conflictoEstado, setConflictoEstado] = useState(null);
 
-  async function cambiarEstado(estado) {
-    if (estado === gestion.estado || ocupado) return;
-    const anterior = gestion.estado;
+    async function cambiarEstado(estado, notaTexto) {
+    if (ocupado) return;
+    const anterior = gestion;
     setError('');
+    setReintento(null);
+    setConflictoEstado(null);
     setOcupado(true);
-    onCambio({ ...gestion, estado }); // se ve al instante; si falla, se revierte
+    // Se ve al instante; si falla, se revierte
+    onCambio({ ...gestion, estado, ...(notaTexto ? { nota: notaTexto } : {}) });
     try {
-      await actualizarGestion(gestion.id, { estado });
-    } catch {
-      onCambio({ ...gestion, estado: anterior });
-      setError('No se pudo cambiar el estado. Inténtalo otra vez.');
+      const actualizada = await cambiarEstadoGestion(gestion.id, estado, notaTexto);
+      onCambio({ ...anterior, ...actualizada });
+      setPosponiendo(false);
+       onAviso(
+        estado === 'hecho'
+          ? `Listo, marcaste "${gestion.nombre}" como hecha.`
+          : estado === 'pospuesto'
+            ? notaTexto
+              ? 'Gestión pospuesta. Tu nota quedó guardada.'
+              : 'Gestión pospuesta.'
+            : `"${gestion.nombre}" volvió a pendiente.`
+      );
+    } catch (err) {
+      onCambio(anterior);
+      setReintento({ estado, nota: notaTexto });
+      const sobrecarga = leerSobrecarga(err); // el 409 no trae "message"
+      if (sobrecarga) setConflictoEstado(sobrecarga[0]);
+      else setError(mensajeDe(err, 'No se pudo guardar el cambio. Inténtalo de nuevo.'));
     } finally {
       setOcupado(false);
     }
+  }
+
+  function elegirEstado(estado) {
+    if (ocupado) return;
+    if (estado === 'pospuesto') {
+      setNota(gestion.nota || '');
+      setError('');
+      setPosponiendo(true);
+      return;
+    }
+    setPosponiendo(false);
+    if (estado !== gestion.estado) cambiarEstado(estado);
   }
 
   function abrirEdicion() {
@@ -242,6 +268,44 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
     return (
       <li className="py-4">
         <form onSubmit={guardar} noValidate className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        {conflictoEstado && (
+        <div className="mt-3">
+          <ResolverConflicto
+            conflicto={conflictoEstado}
+            ocupado={ocupado}
+            opciones={[
+              {
+                icono: CalendarClock,
+                texto: 'Mover a otro día',
+                accion: () => {
+                  setConflictoEstado(null);
+                  onReprogramar(gestion);
+                },
+              },
+              {
+                icono: Pencil,
+                texto: 'Reducir horas',
+                accion: () => {
+                  setConflictoEstado(null);
+                  abrirEdicion();
+                },
+              },
+              gestion.estado !== 'pospuesto' && {
+                icono: Clock,
+                texto: 'Posponerla',
+                accion: () => {
+                  setConflictoEstado(null);
+                  elegirEstado('pospuesto');
+                },
+              },
+            ]}
+            onLimiteGuardado={() => {
+              setConflictoEstado(null);
+              if (reintento) cambiarEstado(reintento.estado, reintento.nota);
+            }}
+          />
+        </div>
+      )}
           {error && (
             <p role="alert" className="text-sm text-red-800">
               {error}
@@ -316,6 +380,11 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
             {gestion.estado === 'hecho' ? 'terminada' : describirPlazo(gestion.fecha_limite).toLowerCase()} —{' '}
             {formatearHoras(gestion.horas_estimadas)} h
           </p>
+            {gestion.nota && (
+            <p className="mt-1 text-sm text-gray-700">
+              <span className="font-medium">Nota:</span> {gestion.nota}
+            </p>
+          )}
         </div>
         <div className="flex gap-1">
           {gestion.estado !== 'hecho' && (
@@ -343,7 +412,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
       </div>
 
       <div
-        role="radiogroup"
+        role="group"
         aria-label={`Estado de ${gestion.nombre}`}
         className="mt-3 inline-flex rounded-lg bg-gray-100 p-1"
       >
@@ -352,11 +421,10 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
           return (
             <button
               key={e.valor}
-              type="button"
-              role="radio"
-              aria-checked={activo}
+              type="button"         
+              aria-pressed={activo}
               disabled={ocupado}
-              onClick={() => cambiarEstado(e.valor)}
+              onClick={() => elegirEstado(e.valor)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none
                 focus-visible:ring-2 focus-visible:ring-gray-400 ${
                   activo ? ESTILO_ACTIVO[e.valor] : 'text-gray-600 hover:text-gray-900'
@@ -367,10 +435,50 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
           );
         })}
       </div>
+            {posponiendo && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            cambiarEstado('pospuesto', nota.trim());
+          }}
+          className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3"
+        >
+          <label htmlFor={`nota-${gestion.id}`} className="block text-sm font-medium text-gray-900">
+            Nota (opcional)
+          </label>
+          <textarea
+            id={`nota-${gestion.id}`}
+            rows={2}
+            autoFocus
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder="Ej.: esperando confirmación del salón"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          />
+          <div className="flex gap-2">
+            <button type="submit" disabled={ocupado} className={btnPrimario}>
+              {ocupado ? 'Guardando…' : 'Confirmar'}
+            </button>
+            <button type="button" onClick={() => setPosponiendo(false)} disabled={ocupado} className={btnNeutral}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
       {error && (
-        <p role="alert" className="mt-2 text-sm text-red-800">
-          {error}
-        </p>
+        <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 text-sm text-red-800">
+          <p>{error}</p>
+          {reintento && (
+            <button
+              type="button"
+              onClick={() => cambiarEstado(reintento.estado, reintento.nota)}
+              disabled={ocupado}
+              className={btnAccion}
+            >
+              Reintentar
+            </button>
+          )}
+        </div>
       )}
     </li>
   );
@@ -665,16 +773,9 @@ function EventoDetalle() {
                     </div>
                   </div>
 
-                  {progreso.total > 0 && (
+                                    {progreso.total > 0 && (
                     <div className="mt-6">
-                      <div className="flex items-end justify-between">
-                        <p className="text-2xl font-bold text-gray-900">
-                          {progreso.porcentaje}%<span className="ml-1.5 text-sm font-medium text-gray-500">hecho</span>
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {formatearHoras(progreso.horasHechas)} de {formatearHoras(progreso.horasTotales)} h
-                        </p>
-                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{textoProgreso(progreso)}</p>
                       <div className="mt-2">
                         <BarraProgreso progreso={progreso} etiqueta={`Avance de ${evento.nombre}`} />
                       </div>
@@ -708,7 +809,13 @@ function EventoDetalle() {
                 />
               </h2>
               {gestiones.length === 0 ? (
-                <p className="mt-4 text-sm text-gray-500">Este evento no tiene gestiones logísticas.</p>
+                                               <div className="mt-4 rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                  <p className="font-medium text-gray-900">Sin tareas asignadas</p>
+                  <p className="mt-1 text-sm text-gray-600">Agrega la primera para empezar a ver el avance.</p>
+                  <button type="button" onClick={() => setAgregando(true)} className={`mt-3 ${btnPrimario}`}>
+                    Agregar subtarea
+                  </button>
+                </div>
               ) : (
                 <ul className="mt-2 divide-y divide-gray-100">
                   {gestiones.map((g) => (
@@ -721,6 +828,7 @@ function EventoDetalle() {
                         setErrorEliminar('');
                         setPorEliminar({ tipo: 'gestion', gestion });
                       }}
+                      onAviso={mostrarAviso}
                     />
                   ))}
                 </ul>

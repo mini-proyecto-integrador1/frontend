@@ -14,6 +14,31 @@ function Modal({ abierto, titulo, descripcion, onCerrar, bloqueado = false, rol 
     (primero || panelRef.current)?.focus();
     const tecla = (e) => {
       if (e.key === 'Escape' && !bloqueado) onCerrar();
+      if (e.key !== 'Tab') return;
+
+      // Atrapa el foco: Tab y Shift+Tab circulan solo dentro del diálogo.
+      const panel = panelRef.current;
+      const enfocables = panel?.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!panel || !enfocables || enfocables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const primero = enfocables[0];
+      const ultimo = enfocables[enfocables.length - 1];
+      const actual = document.activeElement;
+
+      if (!panel.contains(actual)) {
+        e.preventDefault();
+        primero.focus();
+      } else if (e.shiftKey && (actual === primero || actual === panel)) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && actual === ultimo) {
+        e.preventDefault();
+        primero.focus();
+      }
     };
     document.addEventListener('keydown', tecla);
     return () => {
