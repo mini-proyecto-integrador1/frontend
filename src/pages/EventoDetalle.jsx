@@ -43,7 +43,7 @@ const ESTADOS = [
 
 const ESTILO_ACTIVO = {
   pendiente: 'bg-white text-gray-900 shadow-sm',
-  hecho: 'bg-green-600 text-white',
+  hecho: 'bg-green-700 text-white',
   pospuesto: 'bg-amber-400 text-gray-900',
 };
 
@@ -412,7 +412,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) 
       </div>
 
       <div
-        role="radiogroup"
+        role="group"
         aria-label={`Estado de ${gestion.nombre}`}
         className="mt-3 inline-flex rounded-lg bg-gray-100 p-1"
       >
@@ -421,9 +421,8 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) 
           return (
             <button
               key={e.valor}
-              type="button"
-              role="radio"
-              aria-checked={activo}
+              type="button"         
+              aria-pressed={activo}
               disabled={ocupado}
               onClick={() => elegirEstado(e.valor)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none
