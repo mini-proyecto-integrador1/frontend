@@ -4,6 +4,7 @@ import { CalendarClock, CalendarDays, ChevronLeft, Clock, Pencil, Plus, Settings
 import {
   actualizarEvento,
   actualizarGestion,
+  cambiarEstadoGestion,
   crearGestion,
   eliminarEvento,
   eliminarGestion,
@@ -168,21 +169,46 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [conflicto, setConflicto] = useState(null); // 409 al subir las horas en "Editar"
+  const [posponiendo, setPosponiendo] = useState(false);
+  const [nota, setNota] = useState('');
+  const [reintento, setReintento] = useState(null);
 
-  async function cambiarEstado(estado) {
-    if (estado === gestion.estado || ocupado) return;
-    const anterior = gestion.estado;
+    async function cambiarEstado(estado, notaTexto) {
+    if (ocupado) return;
+    const anterior = gestion;
     setError('');
+    setReintento(null);
     setOcupado(true);
-    onCambio({ ...gestion, estado }); // se ve al instante; si falla, se revierte
+    // Se ve al instante; si falla, se revierte
+    onCambio({ ...gestion, estado, ...(notaTexto ? { nota: notaTexto } : {}) });
     try {
-      await actualizarGestion(gestion.id, { estado });
-    } catch {
-      onCambio({ ...gestion, estado: anterior });
-      setError('No se pudo cambiar el estado. Inténtalo otra vez.');
+      const actualizada = await cambiarEstadoGestion(gestion.id, estado, notaTexto);
+      onCambio({ ...anterior, ...actualizada });
+      setPosponiendo(false);
+    } catch (err) {
+      onCambio(anterior);
+      const sobrecarga = leerSobrecarga(err); // el 409 no trae "message"
+      setError(
+        sobrecarga
+          ? `${describirSobrecarga(sobrecarga[0])} Reprograma otra gestión o cambia tu límite.`
+          : mensajeDe(err, 'No se pudo guardar el cambio. Inténtalo de nuevo.')
+      );
+      setReintento({ estado, nota: notaTexto });
     } finally {
       setOcupado(false);
     }
+  }
+
+  function elegirEstado(estado) {
+    if (ocupado) return;
+    if (estado === 'pospuesto') {
+      setNota(gestion.nota || '');
+      setError('');
+      setPosponiendo(true);
+      return;
+    }
+    setPosponiendo(false);
+    if (estado !== gestion.estado) cambiarEstado(estado);
   }
 
   function abrirEdicion() {
@@ -308,6 +334,11 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
             {gestion.estado === 'hecho' ? 'terminada' : describirPlazo(gestion.fecha_limite).toLowerCase()} —{' '}
             {formatearHoras(gestion.horas_estimadas)} h
           </p>
+            {gestion.nota && (
+            <p className="mt-1 text-sm text-gray-700">
+              <span className="font-medium">Nota:</span> {gestion.nota}
+            </p>
+          )}
         </div>
         <div className="flex gap-1">
           {gestion.estado !== 'hecho' && (
@@ -348,7 +379,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
               role="radio"
               aria-checked={activo}
               disabled={ocupado}
-              onClick={() => cambiarEstado(e.valor)}
+              onClick={() => elegirEstado(e.valor)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none
                 focus-visible:ring-2 focus-visible:ring-gray-400 ${
                   activo ? ESTILO_ACTIVO[e.valor] : 'text-gray-600 hover:text-gray-900'
@@ -359,10 +390,50 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar }) {
           );
         })}
       </div>
+            {posponiendo && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            cambiarEstado('pospuesto', nota.trim());
+          }}
+          className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3"
+        >
+          <label htmlFor={`nota-${gestion.id}`} className="block text-sm font-medium text-gray-900">
+            Nota (opcional)
+          </label>
+          <textarea
+            id={`nota-${gestion.id}`}
+            rows={2}
+            autoFocus
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder="Ej.: esperando confirmación del salón"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          />
+          <div className="flex gap-2">
+            <button type="submit" disabled={ocupado} className={btnPrimario}>
+              {ocupado ? 'Guardando…' : 'Confirmar'}
+            </button>
+            <button type="button" onClick={() => setPosponiendo(false)} disabled={ocupado} className={btnNeutral}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
       {error && (
-        <p role="alert" className="mt-2 text-sm text-red-800">
-          {error}
-        </p>
+        <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 text-sm text-red-800">
+          <p>{error}</p>
+          {reintento && (
+            <button
+              type="button"
+              onClick={() => cambiarEstado(reintento.estado, reintento.nota)}
+              disabled={ocupado}
+              className={btnAccion}
+            >
+              Reintentar
+            </button>
+          )}
+        </div>
       )}
     </li>
   );
