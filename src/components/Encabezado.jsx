@@ -39,7 +39,7 @@ function Encabezado() {
   const linkClass = ({ isActive }) =>
     `rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none
      focus-visible:ring-2 focus-visible:ring-gray-400 ${
-       isActive ? 'bg-red-50 text-brand' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+       isActive ? 'bg-red-50 text-red-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
      }`;
 
   return (
