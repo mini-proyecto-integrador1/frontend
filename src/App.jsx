@@ -17,7 +17,9 @@ function LayoutPrivado() {
     <div className="min-h-screen bg-gray-50">
       <LimiteProvider>
         <Encabezado />
-        <Outlet />
+        <main>
+          <Outlet />
+        </main>
       </LimiteProvider>
     </div>
   );
