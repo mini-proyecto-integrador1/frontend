@@ -38,14 +38,14 @@ function Encabezado() {
 
   const linkClass = ({ isActive }) =>
     `rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none
-     focus-visible:ring-2 focus-visible:ring-gray-400 ${
+     focus-visible:ring-2 focus-visible:ring-gray-700 ${
        isActive ? 'bg-red-50 text-red-800' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
      }`;
 
   return (
     <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
-        <NavLink to="/hoy" className="flex items-center gap-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
+        <NavLink to="/hoy" className="flex items-center gap-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white">
             <CalendarCheck size={20} aria-hidden="true" />
           </span>
@@ -73,7 +73,7 @@ function Encabezado() {
             type="button"
             onClick={() => setEditandoLimite(true)}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium
-                       text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                       text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
             <Gauge size={16} aria-hidden="true" />
             <span>
@@ -87,7 +87,7 @@ function Encabezado() {
             type="button"
             onClick={cerrarSesion}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium
-                       text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                       text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
             <LogOut size={16} aria-hidden="true" /> Cerrar sesión
           </button>

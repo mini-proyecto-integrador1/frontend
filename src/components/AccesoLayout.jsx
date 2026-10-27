@@ -82,7 +82,7 @@ function AccesoLayout() {
                 {esRegistro ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?'}{' '}
                 <Link
                   to={esRegistro ? '/login' : '/registro'}
-                  className="rounded font-semibold text-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                  className="rounded font-semibold text-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                 >
                   {esRegistro ? 'Inicia sesión' : 'Crea una'}
                 </Link>

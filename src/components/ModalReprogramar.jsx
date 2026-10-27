@@ -12,7 +12,7 @@ const btnPrimario =
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand';
 const btnNeutral =
   'rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 ' +
-  'disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+  'disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700';
 
 const TITULOS = {
   fecha: 'Reprogramar gestión',
@@ -206,7 +206,7 @@ function ContenidoReprogramar({ gestion, fechaEvento, onCerrar, onListo }) {
               type="button"
               onClick={irAMover}
               className="flex w-full items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left
-                         hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                         hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
             >
               <CalendarClock size={20} className="mt-0.5 shrink-0 text-gray-700" aria-hidden="true" />
               <span className="flex-1">
@@ -225,7 +225,7 @@ function ContenidoReprogramar({ gestion, fechaEvento, onCerrar, onListo }) {
               disabled={conflicto.disponibles < 0.5}
               className="flex w-full items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left
                          hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60
-                         focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
             >
               <Clock size={20} className="mt-0.5 shrink-0 text-gray-700" aria-hidden="true" />
               <span className="flex-1">

@@ -27,13 +27,13 @@ const btnPrimario =
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand';
 const btnNeutral =
   'inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium ' +
-  'text-gray-700 hover:bg-gray-100 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+  'text-gray-700 hover:bg-gray-100 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700';
 const btnAccion =
   'inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium ' +
-  'text-gray-800 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+  'text-gray-800 hover:border-gray-400 hover:bg-gray-50 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700';
 const btnPeligro =
   'inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium ' +
-  'text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+  'text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700';
 
 const ESTADOS = [
   { valor: 'pendiente', texto: 'Pendiente' },
@@ -426,7 +426,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) 
               disabled={ocupado}
               onClick={() => elegirEstado(e.valor)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none
-                focus-visible:ring-2 focus-visible:ring-gray-400 ${
+                focus-visible:ring-2 focus-visible:ring-gray-700 ${
                   activo ? ESTILO_ACTIVO[e.valor] : 'text-gray-600 hover:text-gray-900'
                 }`}
             >
@@ -453,7 +453,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) 
             value={nota}
             onChange={(e) => setNota(e.target.value)}
             placeholder="Ej.: esperando confirmación del salón"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           />
           <div className="flex gap-2">
             <button type="submit" disabled={ocupado} className={btnPrimario}>
@@ -686,7 +686,7 @@ function EventoDetalle() {
     <Link
       to="/evento"
       className="inline-flex items-center gap-1 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900
-                 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
     >
       <ChevronLeft size={16} aria-hidden="true" /> Mis eventos
     </Link>
@@ -849,7 +849,7 @@ function EventoDetalle() {
                   type="button"
                   onClick={() => setAgregando(true)}
                   className="mt-4 flex items-center gap-1.5 rounded-md text-sm font-semibold text-brand hover:text-brand-dark
-                             focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                             focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                 >
                   <Plus size={16} aria-hidden="true" /> Agregar gestión logística
                 </button>

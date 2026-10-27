@@ -70,7 +70,7 @@ function SelectorTipo({ id, value, onChange, error }) {
   const idError = error ? `${id}-error` : undefined;
   const flecha =
     'absolute top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-gray-200 bg-white ' +
-    'text-gray-600 shadow-sm hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 sm:grid';
+    'text-gray-600 shadow-sm hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700 sm:grid';
 
   return (
     <div>
@@ -112,7 +112,7 @@ function SelectorTipo({ id, value, onChange, error }) {
                 tabIndex={activo || (!seleccionado && valor === TIPOS_EVENTO[0].valor) ? 0 : -1}
                 onClick={() => elegir(valor)}
                 className={`flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors
-                  focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 ${
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700 ${
                     activo
                       ? 'border-brand bg-red-50 text-brand'
                       : error
@@ -132,7 +132,7 @@ function SelectorTipo({ id, value, onChange, error }) {
             tabIndex={seleccionado === OTRO ? 0 : -1}
             onClick={() => elegir(OTRO)}
             className={`flex shrink-0 snap-start items-center gap-1.5 rounded-full border border-dashed px-3.5 py-2 text-sm font-medium
-              transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 ${
+              transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700 ${
                 seleccionado === OTRO
                   ? 'border-brand bg-red-50 text-brand'
                   : 'border-gray-400 bg-white text-gray-700 hover:bg-gray-50'

@@ -237,7 +237,7 @@ function Hoy() {
                   type="button"
                   onClick={limpiarFiltros}
                   className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium
-                             text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                             text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                 >
                   <X size={14} aria-hidden="true" /> Limpiar filtros
                 </button>
@@ -317,7 +317,7 @@ function Hoy() {
                             type="button"
                             onClick={() => setReprogramando(g)}
                             className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs
-                                       font-medium text-gray-800 hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                                       font-medium text-gray-800 hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                           >
                             <CalendarClock size={13} aria-hidden="true" /> Reprogramar {g.nombre} ({formatearHoras(g.horas_estimadas)} h)
                           </button>
@@ -403,7 +403,7 @@ function Hoy() {
                                   onClick={() => setReprogramando(g)}
                                   aria-label={`Reprogramar ${g.nombre}`}
                                   className="mt-2 inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs
-                                             font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                                             font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                                 >
                                   <CalendarClock size={14} aria-hidden="true" /> Reprogramar
                                 </button>

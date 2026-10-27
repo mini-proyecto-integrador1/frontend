@@ -42,7 +42,7 @@ function AyudaInfo({ etiqueta, nombre, titulo, lineas, texto, alinear = 'izquier
         onFocus={(e) => e.currentTarget.matches(':focus-visible') && setAbierto(true)}
         onBlur={() => setAbierto(false)}
         className={`inline-flex items-center gap-1.5 rounded-md text-sm font-normal text-gray-500
-                    hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400
+                    hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700
                     ${etiqueta ? 'px-1.5 py-1 hover:bg-gray-100' : 'p-0.5'}`}
       >
         {etiqueta}

@@ -41,7 +41,7 @@ function TarjetaEvento({ evento }) {
           <Link
             to={`/evento/${evento.id}`}
             state={{ agregarGestion: true }}
-            className="mt-1 inline-block font-semibold text-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+            className="mt-1 inline-block font-semibold text-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
             Agregar subtarea
           </Link>

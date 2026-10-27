@@ -178,7 +178,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef, inicial, i
           type="button"
           onClick={onCancelar}
           className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700
-                     hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                     hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
         >
           Cancelar
         </button>
@@ -189,7 +189,7 @@ function NuevaGestion({ fechaTope, onAgregar, onCancelar, revisarRef, inicial, i
 
 const btnAccion =
   'inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium ' +
-  'text-gray-800 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400';
+  'text-gray-800 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700';
 
 // --- Resolución de sobrecarga al crear el evento (Sprint 3 · C3 y C4) ---
 // Muestra cada día que se pasa del límite con sus cifras y, por cada gestión de ese día,
@@ -296,7 +296,7 @@ function PanelConflictos({ conflictos, subtareas, fechaEvento, limite, onCambiar
         <button
           type="button"
           onClick={onCambiarLimite}
-          className="font-semibold underline hover:text-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          className="font-semibold underline hover:text-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
         >
           Cambiar mi límite diario
         </button>
@@ -396,7 +396,7 @@ function Crear() {
                 type="button"
                 onClick={() => navigate(`/evento/${creado.id}`, { state: { agregarGestion: true } })}
                 className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-5 py-2.5
-                           text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                           text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
               >
                 <Plus size={16} aria-hidden="true" /> Agregar más gestiones
               </button>
@@ -491,7 +491,7 @@ function Crear() {
                     onClick={() => setEditandoId(s.id)}
                     aria-label={`Editar la gestión ${s.nombre}`}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500
-                               hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                               hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                   >
                     <Pencil size={14} aria-hidden="true" /> Editar
                   </button>
@@ -500,7 +500,7 @@ function Crear() {
                     onClick={() => dispatch({ type: 'REMOVE_SUBTAREA', id: s.id })}
                     aria-label={`Quitar la gestión ${s.nombre}`}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500
-                               hover:bg-red-50 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                               hover:bg-red-50 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                   >
                     <X size={14} aria-hidden="true" /> Quitar
                   </button>
@@ -526,7 +526,7 @@ function Crear() {
               type="button"
               onClick={() => setMostrarFormGestion(true)}
               className="mt-4 flex items-center gap-1.5 rounded-md text-sm font-semibold text-brand hover:text-brand-dark
-                         focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
             >
               <Plus size={16} aria-hidden="true" /> Agregar gestión logística
             </button>
@@ -559,7 +559,7 @@ function Crear() {
             type="button"
             onClick={() => navigate('/hoy')}
             className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700
-                       hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                       hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
             Cancelar
           </button>
