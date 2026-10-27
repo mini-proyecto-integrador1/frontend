@@ -444,10 +444,14 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) 
           className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3"
         >
           <label htmlFor={`nota-${gestion.id}`} className="block text-sm font-medium text-gray-900">
-            Nota (opcional)
+                       Nota (opcional)
           </label>
+          <p id={`nota-ayuda-${gestion.id}`} className="text-xs text-gray-700">
+            Cuenta por qué la pospones o qué estás esperando. La nota queda guardada y se muestra en la tarjeta de la gestión.
+          </p>
           <textarea
             id={`nota-${gestion.id}`}
+            aria-describedby={`nota-ayuda-${gestion.id}`}
             rows={2}
             autoFocus
             value={nota}
