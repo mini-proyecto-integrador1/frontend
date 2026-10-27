@@ -57,7 +57,7 @@ function Campo({ id, label, error, ayuda, info, icono: Icono, requerido = true, 
             aria-label={mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             aria-pressed={mostrar}
             className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg
-                       text-gray-500 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                       text-gray-500 hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
             {mostrar ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
           </button>

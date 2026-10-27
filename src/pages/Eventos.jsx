@@ -117,7 +117,7 @@ function Eventos() {
                 <Link
                   to={`/evento/${ev.id}`}
                   className={`group block rounded-xl border border-gray-200 bg-white p-5 transition-colors
-                    hover:border-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400
+                    hover:border-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700
                     ${p.diasParaEvento < 0 ? 'opacity-75' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">

@@ -73,7 +73,7 @@ function Modal({ abierto, titulo, descripcion, onCerrar, bloqueado = false, rol 
             disabled={bloqueado}
             aria-label="Cerrar"
             className="-mr-2 -mt-1 rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800
-                       focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
             <X size={18} aria-hidden="true" />
           </button>

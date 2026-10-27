@@ -19,7 +19,7 @@ function Confirmar({ abierto, titulo, mensaje, textoConfirmar = 'Eliminar', proc
           onClick={onCancelar}
           disabled={procesando}
           className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700
-                     hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                     hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
         >
           Cancelar
         </button>
