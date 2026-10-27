@@ -292,11 +292,9 @@ function Hoy() {
         {estado === 'listo' && total > 0 && (
           <>
             {/* Regla de priorización: etiqueta visible + detalle en el globo de ayuda */}
-            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <div className="mt-6">
               <AyudaInfo etiqueta="Ordenado por urgencia" titulo="Así se ordenan tus gestiones" lineas={REGLA_PRIORIDAD} />
-              <p className="text-sm text-gray-700">Primero lo vencido, luego lo de hoy y al final lo próximo.</p>
             </div>
-
             {diasPasados.length > 0 && (
               <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
                 <p className="flex items-center gap-2 font-semibold">
