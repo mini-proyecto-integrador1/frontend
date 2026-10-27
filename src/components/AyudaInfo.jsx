@@ -41,9 +41,11 @@ function AyudaInfo({ etiqueta, nombre, titulo, lineas, texto, alinear = 'izquier
         // Solo el foco por teclado abre el globo; el foco que deja un clic o un toque no.
         onFocus={(e) => e.currentTarget.matches(':focus-visible') && setAbierto(true)}
         onBlur={() => setAbierto(false)}
-        className={`inline-flex items-center gap-1.5 rounded-md text-sm font-normal text-gray-500
+        className={`inline-flex items-center gap-1.5 rounded-md text-sm
                     hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700
-                    ${etiqueta ? 'px-1.5 py-1 hover:bg-gray-100' : 'p-0.5'}`}
+                    ${etiqueta
+            ? 'border border-gray-300 bg-white px-2.5 py-1.5 font-medium text-gray-800 shadow-sm hover:bg-gray-100'
+            : 'p-0.5 font-normal text-gray-500'}`}
       >
         {etiqueta}
         <Info size={etiqueta ? 16 : 15} aria-hidden="true" />
