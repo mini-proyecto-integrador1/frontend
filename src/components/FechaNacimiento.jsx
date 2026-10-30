@@ -223,7 +223,7 @@ function FechaNacimiento({ id, name, value, onChange, error }) {
   const claseSelect = (valor) =>
     `w-full rounded-xl border bg-white px-3 py-2 text-sm transition-colors
      focus:outline-none focus:ring-4
-     ${valor ? 'text-gray-900' : 'text-gray-400'}
+     ${valor ? 'text-gray-900' : 'text-gray-500'}
      ${error
        ? 'border-brand focus:ring-red-100'
        : 'border-[#99D5C9] hover:border-[#7cc4b5] focus:border-[#99D5C9] focus:ring-[#99D5C9]/30'}`;

@@ -457,7 +457,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) 
             value={nota}
             onChange={(e) => setNota(e.target.value)}
             placeholder="Ej.: esperando confirmación del salón"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           />
           <div className="flex gap-2">
             <button type="submit" disabled={ocupado} className={btnPrimario}>
