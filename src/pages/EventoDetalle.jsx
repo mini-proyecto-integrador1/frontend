@@ -802,9 +802,10 @@ function EventoDetalle() {
               <h2 className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
                 Gestiones logísticas
                 <AyudaInfo
-                  nombre="Cómo actualizar tus gestiones"
-                  titulo="Cómo actualizar tus gestiones"
+                  nombre="Qué es una gestión y cómo actualizarla"
+                  titulo="Qué es una gestión y cómo actualizarla"
                   lineas={[
+                    'Una gestión es algo que debes hacer para preparar el evento, como confirmar el catering.',
                     'Marca cada gestión como Hecha o Pospuesta a medida que avanzas.',
                     'Usa Reprogramar para cambiarla de día; te avisamos si ese día se pasa de tu límite.',
                     'Con Editar cambias su nombre u horas.',
