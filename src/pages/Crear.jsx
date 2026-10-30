@@ -528,7 +528,7 @@ function Crear() {
               className="mt-4 flex items-center gap-1.5 rounded-md text-sm font-semibold text-brand hover:text-brand-dark
                          focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
             >
-              <Plus size={16} aria-hidden="true" /> Agregar gestión logística
+              <Plus size={16} aria-hidden="true" /> Agregar gestión
             </button>
           )}
         </div>

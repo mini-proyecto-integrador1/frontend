@@ -802,9 +802,10 @@ function EventoDetalle() {
               <h2 className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
                 Gestiones logísticas
                 <AyudaInfo
-                  nombre="Cómo actualizar tus gestiones"
-                  titulo="Cómo actualizar tus gestiones"
+                  nombre="Qué es una gestión y cómo actualizarla"
+                  titulo="Qué es una gestión y cómo actualizarla"
                   lineas={[
+                    'Una gestión es algo que debes hacer para preparar el evento, como confirmar el catering.',
                     'Marca cada gestión como Hecha o Pospuesta a medida que avanzas.',
                     'Usa Reprogramar para cambiarla de día; te avisamos si ese día se pasa de tu límite.',
                     'Con Editar cambias su nombre u horas.',
@@ -814,10 +815,10 @@ function EventoDetalle() {
               </h2>
               {gestiones.length === 0 ? (
                                                <div className="mt-4 rounded-lg border border-dashed border-gray-300 p-6 text-center">
-                  <p className="font-medium text-gray-900">Sin tareas asignadas</p>
+                  <p className="font-medium text-gray-900">Sin gestiones</p>
                   <p className="mt-1 text-sm text-gray-600">Agrega la primera para empezar a ver el avance.</p>
                   <button type="button" onClick={() => setAgregando(true)} className={`mt-3 ${btnPrimario}`}>
-                    Agregar subtarea
+                    Agregar gestión
                   </button>
                 </div>
               ) : (
@@ -855,7 +856,7 @@ function EventoDetalle() {
                   className="mt-4 flex items-center gap-1.5 rounded-md text-sm font-semibold text-brand hover:text-brand-dark
                              focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
                 >
-                  <Plus size={16} aria-hidden="true" /> Agregar gestión logística
+                  <Plus size={16} aria-hidden="true" /> Agregar gestión
                 </button>
               )}
             </article>
