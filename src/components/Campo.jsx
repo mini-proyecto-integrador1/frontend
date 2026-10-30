@@ -46,7 +46,7 @@ function Campo({ id, label, error, ayuda, info, icono: Icono, requerido = true, 
           aria-invalid={Boolean(error)}
           aria-describedby={[idAyuda, idError].filter(Boolean).join(' ') || undefined}
           className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900
-            placeholder:text-gray-400 transition-colors focus:outline-none focus:ring-4
+            placeholder:text-gray-500 transition-colors focus:outline-none focus:ring-4
             ${esPassword ? 'pr-11' : ''} ${Icono ? 'pl-10' : ''} ${bordes}`}
           {...inputProps}
         />
