@@ -37,13 +37,13 @@ function TarjetaEvento({ evento }) {
 
       {p.total === 0 ? (
                <div className="mt-4 text-sm">
-          <p className="font-medium text-gray-900">Sin tareas asignadas</p>
+          <p className="font-medium text-gray-900">Sin gestiones</p>
           <Link
             to={`/evento/${evento.id}`}
             state={{ agregarGestion: true }}
             className="mt-1 inline-block font-semibold text-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700"
           >
-            Agregar subtarea
+            Agregar gestión
           </Link>
         </div> 
       ) : (
