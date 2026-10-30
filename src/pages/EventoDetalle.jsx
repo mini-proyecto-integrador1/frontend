@@ -19,7 +19,7 @@ import Confirmar from '../components/Confirmar';
 import AyudaInfo from '../components/AyudaInfo';
 import ModalReprogramar from '../components/ModalReprogramar';
 import ModalLimite from '../components/ModalLimite';
-import { describirSobrecarga, leerSobrecarga, maximoQueCabe } from '../sobrecargaUtils';
+import { describirSobrecarga, leerSobrecarga, maximoQueCabe, TEXTO_LIMITE_DIARIO } from '../sobrecargaUtils';
 import { mensajeDe } from '../erroresUtils';
 
 const btnPrimario =
@@ -136,6 +136,7 @@ function ResolverConflicto({ conflicto, opciones, ocupado, onLimiteGuardado }) {
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
       <p>{describirSobrecarga(conflicto)}</p>
       <p className="mt-0.5 font-semibold">Te pasas por {formatearHoras(conflicto.exceso)} h. ¿Cómo lo resuelves?</p>
+      <p className="mt-0.5 text-xs text-red-800">{TEXTO_LIMITE_DIARIO}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {opciones.filter(Boolean).map(({ icono: Icono, texto, accion }) => (
           <button key={texto} type="button" onClick={accion} disabled={ocupado} className={btnAccion}>
@@ -447,7 +448,7 @@ function FilaGestion({ gestion, onCambio, onEliminar, onReprogramar, onAviso }) 
             Nota (opcional)
           </label>
           <p id={`nota-ayuda-${gestion.id}`} className="text-xs text-gray-700">
-            Cuenta por qué la pospones o qué estás esperando. La nota queda guardada y se muestra en la tarjeta de la gestión.
+            Cuenta por qué la pospones o qué estás esperando. La nota queda guardada y se muestra en la tarjeta de la gestión. Una gestión pospuesta cuenta en el total, pero no suma avance hasta que la marques como hecha.
           </p>
           <textarea
             id={`nota-${gestion.id}`}

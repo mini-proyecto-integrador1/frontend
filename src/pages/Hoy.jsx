@@ -7,7 +7,7 @@ import ModalReprogramar from '../components/ModalReprogramar';
 import Aviso from '../components/Aviso';
 import { useLimite } from '../limiteContexto';
 import AyudaInfo from '../components/AyudaInfo';
-import { diasSobrecargados } from '../sobrecargaUtils';
+import { diasSobrecargados, TEXTO_LIMITE_DIARIO } from '../sobrecargaUtils';
 import {
   agruparGestiones,
   compararGestiones,
@@ -302,6 +302,7 @@ function Hoy() {
                   {diasPasados.length === 1 ? 'Un día pasa' : `${diasPasados.length} días pasan`} de tu límite diario de{' '}
                   {formatearHoras(limite)} h
                 </p>
+                <p className="mt-1 text-xs text-red-800">{TEXTO_LIMITE_DIARIO}</p>
                 <ul className="mt-2 space-y-2">
                   {diasPasados.map((d) => (
                     <li key={d.fecha}>

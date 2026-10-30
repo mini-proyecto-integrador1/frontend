@@ -4,6 +4,10 @@ import { formatearFecha, formatearHoras } from './hoyUtils';
 // Cuerpo acordado con BE (ver PR):
 // { codigo: 'sobrecarga', fecha, limite, planificadas, horas_gestion, exceso, horas_disponibles, dia_sugerido }
 // Al crear un evento con varias gestiones: { codigo: 'sobrecarga', conflictos: [ ...mismo formato por día ] }
+// Texto corto que explica para qué sirve el límite diario; se muestra junto a los avisos de sobrecarga.
+export const TEXTO_LIMITE_DIARIO =
+  'El límite diario es el máximo de horas de logística que quieres hacer en un solo día.';
+
 export function leerSobrecarga(err) {
   if (err?.status !== 409 || !err.body) return null;
   const b = err.body;
