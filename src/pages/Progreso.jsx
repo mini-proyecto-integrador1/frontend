@@ -150,6 +150,7 @@ function Progreso() {
                 titulo="Cómo se calcula el avance"
                 lineas={[
                   'El porcentaje es las gestiones hechas sobre el total de gestiones del evento.',
+                  'Las gestiones pospuestas cuentan en el total, pero no suman avance hasta que las marques como hechas.',
                 ]}
               />
             </h1>

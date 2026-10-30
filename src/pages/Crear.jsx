@@ -2,7 +2,7 @@ import { useImperativeHandle, useReducer, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarClock, CheckCircle2, Clock, Pencil, Plus, X } from 'lucide-react';
 import { createEvento } from '../eventoService';
-import { leerSobrecarga, maximoQueCabe } from '../sobrecargaUtils';
+import { leerSobrecarga, maximoQueCabe, TEXTO_LIMITE_DIARIO } from '../sobrecargaUtils';
 import { fechaLocalHoy, formatearFecha, formatearHoras } from '../hoyUtils';
 import { useLimite } from '../limiteContexto';
 import Campo from '../components/Campo';
@@ -225,6 +225,7 @@ function PanelConflictos({ conflictos, subtareas, fechaEvento, limite, onCambiar
         {formatearHoras(limite)} h
       </p>
       <p className="mt-0.5 text-red-800">Elige cómo resolverlo; el cambio se aplica a la lista de arriba.</p>
+      <p className="mt-0.5 text-xs text-red-800">{TEXTO_LIMITE_DIARIO}</p>
 
       <ul className="mt-3 space-y-3">
         {dias.map((d) =>
